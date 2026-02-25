@@ -5,7 +5,7 @@
 | File | Purpose |
 |------|---------|
 | `main.py` | Entry point. Starts Redis, creates the FastAPI app, mounts static files, applies DB migrations, launches the ingest scheduler, and runs Uvicorn on port 5000. |
-| `Readme.md` | Project metadata and architecture notes kept in sync as the project evolves. |
+| `README.md` | Project metadata and architecture notes kept in sync as the project evolves. |
 
 ---
 
