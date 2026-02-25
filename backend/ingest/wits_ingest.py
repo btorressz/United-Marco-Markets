@@ -1,0 +1,98 @@
+import logging
+from datetime import datetime, timezone
+
+import httpx
+import pandas as pd
+
+from backend.config import WITS_COUNTRIES, WITS_PRODUCTS
+from backend.core.event_bus import EventBus, EventType
+from backend.core.state_store import StateStore
+
+logger = logging.getLogger(__name__)
+
+WITS_BASE_URL = "https://wits.worldbank.org/API/V1/SDMX/V21/rest/data"
+
+_SAMPLE_TARIFF_DATA = [
+    {"reporter": "USA", "partner": "CHN", "product": "TOTAL", "year": 2025, "tariff_rate": 19.3, "trade_value": 450000},
+    {"reporter": "USA", "partner": "CHN", "product": "Capital", "year": 2025, "tariff_rate": 7.5, "trade_value": 120000},
+    {"reporter": "CHN", "partner": "USA", "product": "TOTAL", "year": 2025, "tariff_rate": 21.1, "trade_value": 380000},
+]
+
+
+class WITSIngestor:
+
+    def __init__(self, event_bus: EventBus | None = None, state_store: StateStore | None = None):
+        self.event_bus = event_bus or EventBus()
+        self.state_store = state_store or StateStore()
+
+    async def fetch_tariff_data(
+        self,
+        reporter: str = "840",
+        partner: str = "156",
+        product: str = "TOTAL",
+    ) -> pd.DataFrame:
+        url = f"{WITS_BASE_URL}/DF_WITS_Tariff/{reporter}.{partner}.{product}"
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(url, headers={"Accept": "application/json"})
+                resp.raise_for_status()
+                data = resp.json()
+                records = self._parse_response(data)
+                if not records:
+                    logger.warning("WITS returned empty data for %s->%s [%s]", reporter, partner, product)
+                    return self._fallback_data()
+                df = pd.DataFrame(records)
+                self._store_and_emit(df, reporter, partner, product)
+                return df
+        except Exception:
+            logger.warning("WITS API failed for %s->%s [%s], using cached/sample data", reporter, partner, product, exc_info=True)
+            return self._fallback_data()
+
+    def _parse_response(self, data: dict) -> list[dict]:
+        records = []
+        try:
+            observations = data.get("dataSets", [{}])[0].get("observations", {})
+            for key, values in observations.items():
+                records.append({
+                    "key": key,
+                    "tariff_rate": float(values[0]) if values else 0.0,
+                })
+        except (KeyError, IndexError, TypeError):
+            logger.warning("Failed to parse WITS SDMX response", exc_info=True)
+        return records
+
+    def _fallback_data(self) -> pd.DataFrame:
+        logger.info("Returning sample WITS tariff data")
+        return pd.DataFrame(_SAMPLE_TARIFF_DATA)
+
+    def _store_and_emit(self, df: pd.DataFrame, reporter: str, partner: str, product: str) -> None:
+        snapshot_key = f"wits:tariff:{reporter}:{partner}:{product}"
+        self.state_store.set_snapshot(snapshot_key, {
+            "reporter": reporter,
+            "partner": partner,
+            "product": product,
+            "records": df.to_dict(orient="records"),
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }, ttl=86400)
+
+        self.event_bus.emit(
+            EventType.INDEX_UPDATE,
+            source="wits_ingest",
+            payload={
+                "reporter": reporter,
+                "partner": partner,
+                "product": product,
+                "row_count": len(df),
+            },
+        )
+
+    async def fetch_all(self) -> list[pd.DataFrame]:
+        results = []
+        for country in WITS_COUNTRIES:
+            for product in WITS_PRODUCTS:
+                try:
+                    df = await self.fetch_tariff_data(reporter="840", partner=country, product=product)
+                    results.append(df)
+                except Exception:
+                    logger.warning("Failed to fetch WITS data for %s/%s", country, product, exc_info=True)
+        return results

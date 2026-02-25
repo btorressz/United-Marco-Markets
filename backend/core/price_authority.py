@@ -1,0 +1,112 @@
+import json
+import logging
+from datetime import datetime, timezone
+from typing import Any
+
+from backend.core.state_store import StateStore
+
+logger = logging.getLogger(__name__)
+
+_VENUE_PRIORITY = ["pyth", "kraken", "coingecko"]
+
+_CACHE_KEY_PREFIX = "price:"
+
+
+class PriceResult:
+    __slots__ = ("price", "confidence", "source", "ts", "found")
+
+    def __init__(
+        self,
+        price: float = 0.0,
+        confidence: float = 0.0,
+        source: str = "",
+        ts: datetime | None = None,
+        found: bool = False,
+    ):
+        self.price = price
+        self.confidence = confidence
+        self.source = source
+        self.ts = ts or datetime.now(timezone.utc)
+        self.found = found
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "price": self.price,
+            "confidence": self.confidence,
+            "source": self.source,
+            "ts": self.ts.isoformat(),
+            "found": self.found,
+        }
+
+
+class PriceAuthority:
+
+    def __init__(self, state_store: StateStore | None = None):
+        self._store = state_store or StateStore()
+
+    def get_price(self, symbol: str) -> PriceResult:
+        symbol_key = symbol.upper().replace("/", "_").replace("-", "_")
+
+        for venue in _VENUE_PRIORITY:
+            cache_key = f"{_CACHE_KEY_PREFIX}{venue}:{symbol_key}"
+            try:
+                cached = self._store.get_snapshot(cache_key)
+                if cached is None:
+                    continue
+                price = float(cached.get("price", 0))
+                if price <= 0:
+                    continue
+                confidence = float(cached.get("confidence", 0.5))
+                ts_raw = cached.get("ts")
+                if ts_raw:
+                    if isinstance(ts_raw, str):
+                        try:
+                            ts = datetime.fromisoformat(ts_raw)
+                        except ValueError:
+                            ts = datetime.now(timezone.utc)
+                    elif isinstance(ts_raw, (int, float)):
+                        ts = datetime.fromtimestamp(ts_raw, tz=timezone.utc)
+                    else:
+                        ts = datetime.now(timezone.utc)
+                else:
+                    ts = datetime.now(timezone.utc)
+
+                logger.debug("Price hit for %s from %s: %.4f", symbol, venue, price)
+                return PriceResult(
+                    price=price,
+                    confidence=confidence,
+                    source=venue,
+                    ts=ts,
+                    found=True,
+                )
+            except Exception:
+                logger.warning("Error reading price cache for %s/%s", venue, symbol, exc_info=True)
+                continue
+
+        logger.info("No cached price found for %s across venues %s", symbol, _VENUE_PRIORITY)
+        return PriceResult(price=0.0, confidence=0.0, source="none", found=False)
+
+    def set_price(self, symbol: str, venue: str, price: float, confidence: float = 1.0) -> None:
+        symbol_key = symbol.upper().replace("/", "_").replace("-", "_")
+        cache_key = f"{_CACHE_KEY_PREFIX}{venue}:{symbol_key}"
+        data = {
+            "price": price,
+            "confidence": confidence,
+            "symbol": symbol,
+            "venue": venue,
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        self._store.set_snapshot(cache_key, data, ttl=120)
+
+    def get_all_venues(self, symbol: str) -> list[dict[str, Any]]:
+        results = []
+        symbol_key = symbol.upper().replace("/", "_").replace("-", "_")
+        for venue in _VENUE_PRIORITY:
+            cache_key = f"{_CACHE_KEY_PREFIX}{venue}:{symbol_key}"
+            try:
+                cached = self._store.get_snapshot(cache_key)
+                if cached and float(cached.get("price", 0)) > 0:
+                    results.append({"venue": venue, **cached})
+            except Exception:
+                continue
+        return results
