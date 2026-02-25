@@ -1,0 +1,20 @@
+[project]
+name = "United-Marco-Markets"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.13.3",
+    "apscheduler>=3.11.2",
+    "fastapi>=0.129.2",
+    "httpx>=0.28.1",
+    "numpy>=2.4.2",
+    "pandas>=3.0.1",
+    "psycopg2-binary>=2.9.11",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "pytest>=7.4.0",
+    "redis>=7.2.0",
+    "uvicorn>=0.41.0",
+    "websockets>=16.0",
+]
