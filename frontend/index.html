@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tariff Risk Desk</title>
+  <link rel="stylesheet" href="/frontend/assets/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+
+    <header class="header">
+      <div class="header-left">
+        <div class="header-title"><span class="accent">◆</span> Tariff Risk Desk</div>
+        <span id="health-info" class="health-info"></span>
+        <span id="price-integrity-badge" class="integrity-badge ok">Price: OK</span>
+      </div>
+      <div class="header-right">
+        <button id="auto-refresh-toggle" class="auto-refresh-toggle on" title="Toggle auto-refresh"><span class="refresh-dot"></span> AUTO</button>
+        <button id="theme-toggle" class="theme-toggle" title="Toggle light/dark theme"><span class="theme-icon" id="theme-icon-moon"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg></span><span class="theme-icon" id="theme-icon-sun" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 0 0 0-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg></span> <span id="theme-label">DARK</span></button>
+        <span id="connection-status" class="status-badge disconnected"><span class="dot"></span> OFFLINE</span>
+      </div>
+    </header>
+
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="index">Index</button>
+      <button class="tab-btn" data-tab="markets">Markets</button>
+      <button class="tab-btn" data-tab="divergence">Divergence</button>
+      <button class="tab-btn" data-tab="stablecoins">Stablecoins</button>
+      <button class="tab-btn" data-tab="strategy">Strategy</button>
+      <button class="tab-btn" data-tab="execution">Execution</button>
+      <button class="tab-btn" data-tab="risk">Risk</button>
+      <button class="tab-btn" data-tab="agents">Agents</button>
+    </nav>
+
+    <div class="main-content">
+
+      <!-- INDEX TAB -->
+      <div id="tab-index" class="tab-panel active">
+        <div class="metric-row">
+          <div class="metric-box">
+            <div class="metric-label">Tariff Index</div>
+            <div id="index-value" class="metric-value blue">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Shock Score</div>
+            <div id="shock-value" class="metric-value green">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Rate of Change</div>
+            <div id="roc-value" class="metric-value">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Last Updated</div>
+            <div id="index-ts" class="metric-value" style="font-size:14px">--</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Index &amp; Shock History</span>
+            <span id="index-freshness" class="freshness-badge nodata"><span class="freshness-dot"></span> NO DATA</span>
+            <div class="timeframe-selector" data-chart="index">
+              <button class="tf-btn" data-tf="1h">1h</button>
+              <button class="tf-btn" data-tf="4h">4h</button>
+              <button class="tf-btn" data-tf="1d">1d</button>
+              <button class="tf-btn active" data-tf="7d">7d</button>
+            </div>
+          </div>
+          <div class="chart-container tall">
+            <canvas id="index-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div>
+            <div class="section-title">Index Components</div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Component</th><th>Value</th></tr></thead>
+                <tbody id="components-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Prediction</div>
+            <div id="prediction-panel" class="card">
+              <div class="prediction-row">
+                <span class="prediction-label">BTC Up (4h):</span>
+                <span id="pred-up" class="metric-value" style="font-size:18px">--</span>
+              </div>
+              <div class="prediction-row">
+                <span class="prediction-label">Confidence:</span>
+                <span id="pred-confidence" class="metric-value" style="font-size:14px">--</span>
+              </div>
+              <div id="pred-drivers" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:16px">Macro Terminal</div>
+        <div id="macro-terminal-freshness" style="margin-bottom:8px;font-size:12px;color:var(--text-muted)"></div>
+        <div class="grid-2">
+          <div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">WITS Tariff Series</span></div>
+              <div id="macro-wits-series" class="macro-panel-body">
+                <div class="empty-state"><div class="empty-state-text">No WITS series data available</div></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Rolling Delta</span></div>
+              <div id="macro-rolling-delta" class="macro-panel-body">
+                <div class="empty-state"><div class="empty-state-text">No rolling delta data available</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px">
+          <div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Country Weights</span></div>
+              <div id="macro-country-weights" class="macro-panel-body">
+                <div class="empty-state"><div class="empty-state-text">No country weight data available</div></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Correlation Heatmap</span></div>
+              <div id="macro-heatmap" class="heatmap-container">
+                <div class="empty-state"><div class="empty-state-text">No correlation data available</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MARKETS TAB -->
+      <div id="tab-markets" class="tab-panel">
+        <div class="section-header">
+          <div class="section-title">Live Prices</div>
+          <span id="markets-freshness" class="freshness-badge nodata"><span class="freshness-dot"></span> NO DATA</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Symbol</th><th>Source</th><th>Price</th><th>Confidence</th><th>Time</th></tr></thead>
+            <tbody id="markets-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div>
+            <div class="section-title">Funding Rates</div>
+            <div class="card">
+              <div class="chart-container">
+                <canvas id="funding-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Carry Scores</div>
+            <div id="carry-panel" class="card">
+              <div class="empty-state"><div class="empty-state-text">Loading carry data...</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Microstructure</div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header"><span class="card-title">OB Imbalance</span></div>
+            <div id="ob-imbalance" class="card-value" style="text-align:center">--</div>
+            <div id="ob-bias" class="card-subtitle" style="text-align:center">--</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Basis Opportunity</span></div>
+            <div id="basis-info" style="font-size:13px;color:var(--text-secondary)">--</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Price Integrity</span></div>
+            <div id="integrity-detail" style="font-size:13px;color:var(--text-secondary)">--</div>
+          </div>
+        </div>
+
+        <div class="section-title">Solana Execution Quality</div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Quality Score</span></div>
+            <div id="solana-quality-score" class="card-value" style="text-align:center">--</div>
+            <div id="solana-slippage-risk" class="card-subtitle" style="text-align:center">--</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">RPC Latency</span></div>
+            <div id="solana-rpc-latency" class="card-value" style="text-align:center">--</div>
+            <div id="solana-congestion" class="card-subtitle" style="text-align:center">--</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Route Info</span></div>
+            <div id="solana-route-info" style="font-size:13px;color:var(--text-secondary)">--</div>
+          </div>
+        </div>
+
+        <div class="section-title">Funding Arbitrage</div>
+        <div class="card" id="funding-arb-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading funding arb data...</div></div>
+        </div>
+
+        <div class="section-title">Basis Monitor</div>
+        <div class="card" id="basis-monitor-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading basis data...</div></div>
+        </div>
+
+        <div class="section-title" style="margin-top:16px">
+          <span>Feed Status</span>
+          <button id="feed-status-toggle" class="btn" style="margin-left:8px;padding:2px 10px;font-size:11px;cursor:pointer">Show</button>
+        </div>
+        <div id="feed-status-panel" class="card" style="display:none">
+          <div class="empty-state"><div class="empty-state-text">Loading feed status...</div></div>
+        </div>
+      </div>
+
+      <!-- DIVERGENCE TAB -->
+      <div id="tab-divergence" class="tab-panel">
+        <div class="section-header">
+          <div class="section-title">Cross-Venue Spreads</div>
+          <span id="divergence-freshness" class="freshness-badge nodata"><span class="freshness-dot"></span> NO DATA</span>
+        </div>
+        <div class="card">
+          <div class="chart-container tall">
+            <canvas id="divergence-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="section-title">Spread Details</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Market</th><th>Venue A</th><th>Price A</th><th>Venue B</th><th>Price B</th><th>Spread</th></tr></thead>
+            <tbody id="spreads-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div>
+            <div class="section-title">Divergence Alerts</div>
+            <div id="divergence-alerts">
+              <div class="empty-state"><div class="empty-state-text">No alerts</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Dislocation Alerts</div>
+            <div id="dislocation-alerts">
+              <div class="empty-state"><div class="empty-state-text">No dislocations</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STABLECOINS TAB -->
+      <div id="tab-stablecoins" class="tab-panel">
+        <div class="section-title">Stablecoin Peg Monitor</div>
+        <div class="metric-row">
+          <div class="metric-box" id="stable-usdc">
+            <div class="metric-label">USDC</div>
+            <div class="metric-value green">$1.0000</div>
+            <div class="metric-sublabel">0 bps depeg</div>
+          </div>
+          <div class="metric-box" id="stable-usdt">
+            <div class="metric-label">USDT</div>
+            <div class="metric-value green">$1.0000</div>
+            <div class="metric-sublabel">0 bps depeg</div>
+          </div>
+          <div class="metric-box" id="stable-dai">
+            <div class="metric-label">DAI</div>
+            <div class="metric-value green">$1.0000</div>
+            <div class="metric-sublabel">0 bps depeg</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <div class="section-title">Depeg Heatmap</div>
+            <div class="card">
+              <table class="heatmap-table" id="depeg-heatmap">
+                <thead><tr><th>Stablecoin</th><th>Price</th><th>Depeg (bps)</th><th>Status</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Stress / Peg Break</div>
+            <div class="card" id="stable-stress-panel">
+              <div class="empty-state"><div class="empty-state-text">Loading...</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Stablecoin Alerts</div>
+        <div id="stable-alerts">
+          <div class="empty-state"><div class="empty-state-text">No alerts</div></div>
+        </div>
+
+        <div class="section-title">Stable Flow Momentum</div>
+        <div class="card" id="stable-flow-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading stable flow data...</div></div>
+        </div>
+      </div>
+
+      <!-- STRATEGY TAB -->
+      <div id="tab-strategy" class="tab-panel">
+        <div class="section-title">Active Rule Signals</div>
+        <div id="rules-container">
+          <div class="empty-state"><div class="empty-state-icon">⚡</div><div class="empty-state-text">Loading rules...</div></div>
+        </div>
+
+        <div class="section-title">Registered Rules</div>
+        <div id="rules-list"></div>
+
+        <div class="section-title">Adaptive Risk Weights</div>
+        <div class="card" id="adaptive-weights-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading weights...</div></div>
+        </div>
+
+        <div class="section-title">Portfolio Proposal</div>
+        <div class="card" id="portfolio-proposal-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading portfolio proposal...</div></div>
+        </div>
+      </div>
+
+      <!-- EXECUTION TAB -->
+      <div id="tab-execution" class="tab-panel">
+        <div class="section-title">Decision Data Status</div>
+        <div id="decision-data-panel" class="decision-data-panel">
+          <div style="font-size:12px;color:var(--text-muted)">Loading data quality status...</div>
+        </div>
+
+        <div class="section-title">Submit Paper Order</div>
+        <div class="card">
+          <form id="order-form" class="inline-form">
+            <div class="form-group">
+              <label class="form-label">Venue</label>
+              <select name="venue" class="form-select">
+                <option value="paper">Paper</option>
+                <option value="hyperliquid">Hyperliquid</option>
+                <option value="drift">Drift</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Market</label>
+              <input name="market" class="form-input" value="SOL-PERP" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Side</label>
+              <select name="side" class="form-select">
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Size</label>
+              <input name="size" class="form-input" type="number" step="0.001" min="0.001" placeholder="1.0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Price (opt)</label>
+              <input name="price" class="form-input" type="number" step="0.01" placeholder="Market">
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-success">Submit Order</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div>
+            <div class="section-title">Open Positions</div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Venue</th><th>Market</th><th>Side</th><th>Size</th><th>Entry Price</th><th>Time</th></tr></thead>
+                <tbody id="positions-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">PnL Attribution</div>
+            <div class="card" id="pnl-attribution-panel">
+              <div class="empty-state"><div class="empty-state-text">No positions for attribution</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Execution Quality Index</div>
+        <div class="card" id="eqi-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading EQI...</div></div>
+        </div>
+
+        <div class="section-title">Paper Trade History</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Venue</th><th>Market</th><th>Side</th><th>Size</th><th>Price</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody id="trades-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RISK TAB -->
+      <div id="tab-risk" class="tab-panel">
+        <div id="throttle-banner" class="throttle-banner inactive">
+          <span>✓</span> <strong>THROTTLE OFF</strong> — Trading enabled
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-box">
+            <div class="metric-label">Current Leverage</div>
+            <div id="risk-leverage" class="metric-value">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Margin Usage</div>
+            <div id="risk-margin" class="metric-value">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Daily P&amp;L</div>
+            <div id="risk-pnl" class="metric-value">--</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <div class="section-title">Guardrails</div>
+            <div class="card">
+              <div id="guardrails-container"></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Stress Test</div>
+            <div class="card">
+              <form id="stress-form">
+                <div class="form-group">
+                  <label class="form-label">Scenario</label>
+                  <select name="scenario" class="form-select">
+                    <option value="tariff_shock">Tariff Shock</option>
+                    <option value="liquidity_crisis">Liquidity Crisis</option>
+                    <option value="flash_crash">Flash Crash</option>
+                    <option value="funding_flip">Funding Flip</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Run Test</button>
+              </form>
+              <div id="stress-result"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Monte Carlo Simulation</div>
+        <div class="card">
+          <form id="mc-form" class="inline-form">
+            <div class="form-group">
+              <label class="form-label">Symbol</label>
+              <input name="symbol" class="form-input" value="SOL" style="width:80px">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Position Size</label>
+              <input name="position_size" class="form-input" type="number" step="0.1" value="1.0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Horizon</label>
+              <input name="horizon_value" class="form-input" type="number" value="4" min="1" style="width:70px">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit</label>
+              <select name="horizon_unit" class="form-select">
+                <option value="minutes">Minutes</option>
+                <option value="hours" selected>Hours</option>
+                <option value="days">Days</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Paths</label>
+              <input name="n_paths" class="form-input" type="number" value="2000" min="100" max="10000">
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary">Run MC</button>
+            </div>
+          </form>
+          <div id="mc-horizon-summary" style="margin-top:8px;font-size:13px;color:var(--text-muted);display:none"></div>
+          <div id="mc-result"></div>
+          <div class="chart-container" id="mc-chart-wrap" style="display:none">
+            <canvas id="mc-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="section-title">Regime Replay</div>
+        <div class="card" id="regime-replay-panel">
+          <div class="empty-state"><div class="empty-state-text">No regime history yet</div></div>
+        </div>
+
+        <div class="section-title">Liquidation Heatmap</div>
+        <div class="card" id="liquidation-heatmap-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading heatmap...</div></div>
+        </div>
+      </div>
+
+      <!-- AGENTS TAB -->
+      <div id="tab-agents" class="tab-panel">
+        <div class="section-title">Agent Status</div>
+        <div class="metric-row" id="agent-status-row">
+          <div class="metric-box">
+            <div class="metric-label">Active Agents</div>
+            <div id="agent-count" class="metric-value blue">6</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Active Signals</div>
+            <div id="agent-signal-count" class="metric-value">0</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Last Updated</div>
+            <div id="agent-last-updated" class="metric-value" style="font-size:12px">--</div>
+          </div>
+        </div>
+
+        <div class="section-title">Agent Signals</div>
+        <div id="agent-signals-container">
+          <div class="empty-state"><div class="empty-state-text">No active agent signals</div></div>
+        </div>
+
+        <div class="section-title">Agent Registry</div>
+        <div id="agent-registry"></div>
+      </div>
+
+    </div>
+
+    <div class="timeline-panel">
+      <div class="timeline-header">
+        <span class="timeline-title">Event Timeline</span>
+        <span class="timeline-title" style="font-weight:400;text-transform:none;font-size:11px;color:var(--text-muted)">Last 50 events</span>
+      </div>
+      <div id="timeline-body" class="timeline-body"></div>
+    </div>
+
+  </div>
+
+  <script src="/frontend/assets/api.js"></script>
+  <script src="/frontend/assets/ws.js"></script>
+  <script src="/frontend/assets/charts.js"></script>
+  <script src="/frontend/assets/ui.js"></script>
+  <script src="/frontend/assets/app.js"></script>
+</body>
+</html>
