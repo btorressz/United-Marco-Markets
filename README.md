@@ -1,4 +1,4 @@
-# United-Marco-Markets (Tarrif Risk Desk)
+# United-Marco-Markets (Tarif Risk Desk)
 
 ## Overview
 A unified macro-to-markets risk desk that turns trade policy and geopolitical signals into actionable market intelligence. Features a live Tariff Pressure Index, market divergence detection, rule-based portfolio actions, stress tests, ML prediction, Monte Carlo risk, stablecoin monitoring, 6 AI agents, execution quality tracking, funding arb detection, basis engine, portfolio optimization, liquidation heatmap, light/dark theme, freshness indicators, feed status monitoring, and optional execution via Hyperliquid, Drift, and Jupiter.
