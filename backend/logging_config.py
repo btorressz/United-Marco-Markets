@@ -39,7 +39,11 @@ def setup_logging(level: str | None = None) -> None:
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("redis").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler.scheduler").setLevel(logging.WARNING)
 
 
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
+
