@@ -117,12 +117,15 @@ class TestRiskEngine:
         assert engine.throttle_active is False
         assert engine.throttle_reason == ""
 
-    def test_throttle_blocks_actions(self, engine):
-        """Test that throttle blocks actions."""
+    def test_throttle_blocks_new_actions(self, engine):
+        """Test that throttle blocks new (non-reducing) actions."""
         engine.activate_throttle("test throttle")
 
         positions = []
         proposed_action = {
+            "venue": "paper",
+            "market": "SOL-PERP",
+            "side": "buy",
             "size": 1.0,
             "price": 100.0,
             "margin": 50.0,
@@ -133,8 +136,28 @@ class TestRiskEngine:
         assert allowed is False
         assert any("Throttle" in reason for reason in reasons)
 
-    def test_cooldown_enforcement(self, engine):
-        """Test that cooldown is enforced between actions."""
+    def test_throttle_allows_reducing(self, engine):
+        """Test that throttle allows position-reducing actions."""
+        engine.activate_throttle("test throttle")
+
+        positions = [
+            {"venue": "paper", "market": "SOL-PERP", "size": 1.0, "entry_price": 100.0, "margin": 50.0},
+        ]
+        proposed_action = {
+            "venue": "paper",
+            "market": "SOL-PERP",
+            "side": "sell",
+            "size": 0.5,
+            "price": 100.0,
+            "margin": 0.0,
+        }
+
+        allowed, reasons = engine.check_constraints(positions, proposed_action)
+
+        assert not any("Throttle" in reason for reason in reasons)
+
+    def test_cooldown_enforcement_live(self, engine):
+        """Test that cooldown is enforced between actions in live mode."""
         engine.cooldown_seconds = 1
 
         positions = []
@@ -144,18 +167,35 @@ class TestRiskEngine:
             "margin": 0.0,
         }
 
-        allowed1, reasons1 = engine.check_constraints(positions, proposed_action)
+        allowed1, reasons1 = engine.check_constraints(positions, proposed_action, execution_mode="live")
         assert isinstance(allowed1, bool)
 
-        allowed2, reasons2 = engine.check_constraints(positions, proposed_action)
+        allowed2, reasons2 = engine.check_constraints(positions, proposed_action, execution_mode="live")
         assert isinstance(allowed2, bool)
-        
+
         if not allowed2:
             assert any("Cooldown" in reason for reason in reasons2)
 
         time.sleep(1.1)
-        allowed3, reasons3 = engine.check_constraints(positions, proposed_action)
+        allowed3, reasons3 = engine.check_constraints(positions, proposed_action, execution_mode="live")
         assert isinstance(allowed3, bool)
+
+    def test_cooldown_skipped_in_paper(self, engine):
+        """Test that cooldown is NOT enforced in paper mode."""
+        engine.cooldown_seconds = 300
+
+        positions = []
+        proposed_action = {
+            "size": 0.01,
+            "price": 100.0,
+            "margin": 0.0,
+        }
+
+        allowed1, _ = engine.check_constraints(positions, proposed_action, execution_mode="paper")
+        assert allowed1 is True
+
+        allowed2, reasons2 = engine.check_constraints(positions, proposed_action, execution_mode="paper")
+        assert not any("Cooldown" in r for r in reasons2)
 
     def test_record_pnl(self, engine):
         """Test PnL recording."""
