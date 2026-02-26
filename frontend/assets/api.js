@@ -23,12 +23,27 @@ const API = (() => {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const detail = await res.text();
-        throw new Error(`API ${res.status}: ${detail}`);
+        let msg = `API ${res.status}`;
+        try {
+          const data = await res.json();
+          const detail = data.detail || data;
+          if (detail && detail.reasons) {
+            msg = detail.reasons.join('; ');
+          } else if (detail && detail.message) {
+            msg = detail.message;
+          } else if (typeof detail === 'string') {
+            msg = detail;
+          }
+        } catch (_) {
+          msg = await res.text().catch(() => msg);
+        }
+        throw new Error(msg);
       }
       return await res.json();
     } catch (err) {
-      console.error(`[API] Error posting ${path}:`, err);
+      if (err.message && !err.message.startsWith('[API]')) {
+        console.warn(`[API] ${path}: ${err.message}`);
+      }
       throw err;
     }
   }
