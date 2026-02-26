@@ -71,6 +71,9 @@ MAX_MARGIN_USAGE: float = _env_float("MAX_MARGIN_USAGE", 0.6)
 MAX_DAILY_LOSS: float = _env_float("MAX_DAILY_LOSS", 500.0)
 COOLDOWN_SECONDS: int = _env_int("COOLDOWN_SECONDS", 300)
 
+PRICE_FRESHNESS_THRESHOLD_S: int = _env_int("PRICE_FRESHNESS_THRESHOLD_S", 30)
+PRICE_INTEGRITY_BLOCK_LIVE: bool = _env("PRICE_INTEGRITY_BLOCK_LIVE", "1") in ("1", "true", "yes")
+
 LOG_LEVEL: str = _env("LOG_LEVEL", "INFO").upper()
 
 
