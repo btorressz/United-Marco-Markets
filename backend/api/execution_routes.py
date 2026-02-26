@@ -39,22 +39,31 @@ class JupiterSwapRequest(BaseModel):
 @router.post("/order")
 def place_order(req: OrderRequest):
     try:
+        side = req.side.lower().strip()
+        if side not in ("buy", "sell"):
+            raise HTTPException(
+                status_code=400,
+                detail={"status": "error", "message": f"Invalid side '{req.side}' — must be 'buy' or 'sell'"},
+            )
+
         result = _exec_router.route_order(
             venue=req.venue,
             market=req.market,
-            side=req.side,
+            side=side,
             size=req.size,
             price=req.price,
         )
         if result.get("status") == "blocked":
             raise HTTPException(status_code=403, detail=result)
 
+        fill_price = req.price or result.get("fill_price", 0.0)
+
         _positions_repo.save_paper_trade(
             venue=req.venue,
             market=req.market,
-            side=req.side,
+            side=side,
             size=req.size,
-            price=req.price or result.get("fill_price", 0.0),
+            price=fill_price,
             order_type="limit",
             status=result.get("status", "unknown"),
         )
@@ -64,7 +73,7 @@ def place_order(req: OrderRequest):
         raise
     except Exception as exc:
         logger.error("Error placing order: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to place order")
+        raise HTTPException(status_code=500, detail={"status": "error", "message": "Failed to place order"})
 
 
 @router.get("/positions")
