@@ -20,3 +20,40 @@ Paper SELL was blocked by the risk engine's **300-second cooldown timer**. After
 | `frontend/assets/api.js` | `postJSON()` now parses structured error responses from 403/4xx — extracts `reasons` array or `message` from `detail` for human-readable error display instead of raw JSON. Changed from `console.error` to `console.warn` for API errors (not application crashes). |
 | `tests/test_risk_throttle.py` | Updated cooldown test to use `execution_mode="live"`. Added `test_cooldown_skipped_in_paper` and `test_throttle_allows_reducing` tests. |
 | `tests/test_paper_trading.py` | **New file** — 21 tests covering: paper BUY creates long, paper SELL creates short, SELL reduces/closes/flips long, BUY closes short, events emitted for both sides, position `side` field, risk engine reducing detection, throttle/daily-loss bypass for reduces, no cooldown in paper mode. |
+
+
+## How Live Pricing Freshness/Integrity Is Enforced
+
+Before every trade:
+1. The router fetches the latest price from the authority cascade (Pyth → Kraken → CoinGecko)
+2. If no price data exists and no explicit price was provided: trade blocked with clean message
+3. Price freshness checked against `PRICE_FRESHNESS_THRESHOLD_S` (default 30s):
+   - **Live mode**: stale data blocks the trade, emits `TRADE_BLOCKED_STALE_DATA`
+   - **Paper mode**: allows trade but tags with `data_quality: DEGRADED`, emits `TRADE_DEGRADED_DATA`
+4. Price integrity checked (cross-venue deviation):
+   - **Live mode**: WARNING status blocks trade (configurable via `PRICE_INTEGRITY_BLOCK_LIVE`)
+   - **Paper mode**: allows trade with DEGRADED tag
+5. Every trade event includes: `price_asof_ts`, `price_source`, `integrity_status`, `data_age_ms`, `tariff_ts`, `shock_ts`
+
+### Logging Changes
+- APScheduler loggers set to WARNING level (was INFO)
+- No more "Running job Kraken Price Ingest..." noise during trade actions
+- Application trade logs (ORDER_SENT, ORDER_FILLED) remain at INFO level
+- Risk warnings and errors remain visible
+
+### Paper SELL Behavior Rules
+- `side: "sell"` opens a short position if no existing position
+- `side: "sell"` reduces an existing long position
+- `side: "sell"` closes an existing long if size matches exactly
+- `side: "sell"` flips from long to short if sell size exceeds long size
+- Reducing/closing trades bypass: cooldown, throttle, leverage limit, margin limit, daily loss limit
+- New short-opening sells are subject to all risk checks
+
+### Test Results
+98 tests passing (77 original + 21 new):
+- `test_index_calc.py`: 6 passed
+- `test_shock_calc.py`: 16 passed
+- `test_divergence_alerts.py`: 14 passed
+- `test_risk_throttle.py`: 18 passed (was 16, added 2)
+- `test_new_features.py`: 25 passed
+- `test_paper_trading.py`: 19 passed (new file)
