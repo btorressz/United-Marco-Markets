@@ -29,7 +29,7 @@ class PaperExecutor:
     ) -> dict:
         order_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
-        fill_price = price if price is not None else 0.0
+        fill_price = price if price is not None and price > 0 else 0.0
         ctx = data_context or {}
 
         self.event_bus.emit(
@@ -46,9 +46,13 @@ class PaperExecutor:
                 "tariff_ts": ctx.get("tariff_ts"),
                 "shock_ts": ctx.get("shock_ts"),
                 "price_ts": ctx.get("price_ts"),
-                "price_integrity_status": ctx.get("price_integrity_status", "OK"),
+                "price_source": ctx.get("price_source", "unknown"),
+                "price_asof_ts": ctx.get("price_asof_ts"),
+                "integrity_status": ctx.get("integrity_status", "OK"),
                 "execution_mode": ctx.get("execution_mode", "paper"),
                 "data_age_ms": ctx.get("data_age_ms"),
+                "data_quality": ctx.get("data_quality", "OK"),
+                "message": f"Paper {side.upper()} {size} {market} @ {fill_price:.4f}",
             },
         )
 
@@ -80,8 +84,13 @@ class PaperExecutor:
                 "tariff_ts": ctx.get("tariff_ts"),
                 "shock_ts": ctx.get("shock_ts"),
                 "price_ts": ctx.get("price_ts"),
-                "price_integrity_status": ctx.get("price_integrity_status", "OK"),
+                "price_source": ctx.get("price_source", "unknown"),
+                "price_asof_ts": ctx.get("price_asof_ts"),
+                "integrity_status": ctx.get("integrity_status", "OK"),
                 "execution_mode": ctx.get("execution_mode", "paper"),
+                "data_age_ms": ctx.get("data_age_ms"),
+                "data_quality": ctx.get("data_quality", "OK"),
+                "message": f"Paper {side.upper()} {size} {market} filled @ {fill_price:.4f}",
             },
         )
 
@@ -94,6 +103,10 @@ class PaperExecutor:
             "order_id": order_id,
             "status": "paper_filled",
             "fill_price": fill_price,
+            "side": side,
+            "market": market,
+            "venue": venue,
+            "size": size,
             "ts": now.isoformat(),
         }
 
@@ -108,15 +121,17 @@ class PaperExecutor:
     def get_positions(self) -> list[dict]:
         results = []
         for key, pos in self._positions.items():
+            size = pos["size"]
+            side = "long" if size > 0 else "short"
             results.append(
                 PositionState(
                     venue=pos["venue"],
                     market=pos["market"],
-                    size=pos["size"],
+                    size=size,
                     entry_price=pos["entry_price"],
                     pnl=pos.get("pnl", 0.0),
                     margin=pos.get("margin", 0.0),
-                ).model_dump()
+                ).model_dump() | {"side": side}
             )
         return results
 
@@ -152,3 +167,4 @@ class PaperExecutor:
                 "pnl": 0.0,
                 "margin": 0.0,
             }
+
