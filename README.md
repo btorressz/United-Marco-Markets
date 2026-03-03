@@ -1,5 +1,7 @@
 # United-Marco-Markets (Tariff Risk Desk)
 
+**NOTE** : This project is for research and development purposes ONLY at the moment. 
+
 # Overview
 This project is a unified macro-to-markets risk desk designed to transform trade policy and geopolitical signals into actionable market intelligence. It monitors global tariff data and news sentiment to create a Tariff Pressure Index, integrates with live crypto market data from multiple sources, employs heuristic AI agents for risk analysis, and provides execution capabilities across various platforms. The system prioritizes safety with a default paper mode and a fail-open design, all presented through a dark/light theme trading desk dashboard.
 
