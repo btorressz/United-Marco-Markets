@@ -69,3 +69,174 @@ Runs up to 10,000 simulated price paths using geometric Brownian motion to estim
 
 Supports horizons in minutes, hours, or days.
 
+
+**Stablecoin Health Monitor**
+Tracks USDC, USDT, and DAI against their $1.00 peg. Measures depeg in basis points, detects stress conditions, and estimates peg-break probability. When stablecoins start depegging, it's often an early warning of broader market stress.
+
+**Liquidation Heatmap**
+A grid showing liquidation probability at different leverage levels (1x through 10x) and price drops (5% through 50%). Shows traders exactly how dangerous their leverage is across scenarios.
+
+**Portfolio Optimizer**
+Proposes allocation weights across four categories: Hyperliquid perpetuals, Drift perpetuals, Jupiter spot swaps, and stablecoins. Supports three methods:
+- **Risk Parity** — Equalize risk contribution across assets
+- **Mean-Variance** — Maximize risk-adjusted returns (Sharpe ratio)
+- **Kelly Criterion** — Mathematically optimal bet sizing
+
+The optimizer only proposes — it never auto-trades.
+
+**Additional Modules:**
+- Funding rate arbitrage detection (Hyperliquid vs Drift)
+- Perpetual basis engine (annualized basis, net carry, feasibility scoring)
+- Stablecoin flow momentum (risk-on/risk-off indicator)
+- Adaptive risk weights (dynamically adjust strategy weights by regime)
+- Execution Quality Index (tracks latency, slippage, and fill quality)
+- Solana liquidity intelligence (congestion detection, route quality)
+- Strategy sandbox (A/B comparison of trading strategies)
+- Replay engine (backtest strategies against historical events)
+- Slippage model (estimate slippage curves and safe order sizes)
+- Hedge ratio calculator (optimal hedge ratios between asset pairs)
+- Stablecoin playbook (tiered defensive actions for depeg scenarios)
+
+### Stage 3: Decide (The Agent Layer)
+
+Seven AI agents continuously evaluate market conditions and produce signals. They are **heuristic** — rule-based, not machine learning — which makes them deterministic, explainable, and predictable. Each agent specializes in a different domain:
+
+**Risk Agent**
+Watches liquidation distance and margin usage. When shock is high AND volatility is extreme, recommends throttling new trades. Proposes `reduce_size` or `block_execution`.
+
+**Macro Agent**
+Monitors tariff momentum (is the index accelerating?), GDELT shock spikes, and high-tariff regimes. When the tariff index exceeds 60, it recommends reducing exposure.
+
+**Execution Agent**
+Pre-trade safety checks. Before any order goes through, it validates spread width, liquidity depth, and price integrity. In live mode, it can outright block trades if conditions are unsafe.
+
+**Liquidity Agent**
+Watches for stablecoin depegging, extreme orderbook imbalance, and thin liquidity. If USDC depegs by more than 50 basis points, it recommends pausing trading.
+
+**Hyperliquid Agent**
+Specialized in Hyperliquid's orderbook microstructure. Detects imbalance direction, spread compression (potential breakout signal), trade aggression patterns, and liquidity thinning.
+
+**Jupiter Agent**
+Monitors Jupiter/Solana swap conditions: quote freshness (stale quotes are dangerous), route complexity (more hops = more risk), price impact estimation, and Solana network congestion.
+
+**Hedging Agent**
+Position-aware. Looks at your actual open positions and evaluates them against current shock, volatility, and funding conditions. Produces per-position hedge proposals with urgency scores and specific actions (reduce, hedge, rotate, increase).
+
+Each agent emits signals with:
+- **Confidence** (0.0 to 1.0) — How sure the agent is
+- **Severity** (low/medium/high) — How urgent the signal is
+- **Direction** (bullish/bearish/neutral) — Market direction assessment
+- **Proposed action** — What to do about it (reduce_size, hedge, block_execution, etc.)
+- **Reasoning** — Human-readable explanation of why
+
+### Stage 4: Execute (The Trading Layer)
+
+The execution router handles all trade requests through a multi-step safety pipeline:
+
+```
+Order Request
+    ↓
+[1] Fetch live price from Pyth → Kraken → CoinGecko cascade
+    ↓
+[2] Validate price freshness (must be < 30 seconds old)
+    ↓
+[3] Validate price integrity (cross-venue deviation check)
+    ↓
+[4] Risk engine check (leverage, margin, daily loss limits)
+    ↓
+[5] Execution agent pre-trade check (live mode only)
+    ↓
+[6] Route to executor (paper or live)
+    ↓
+[7] Emit ORDER_SENT → fill → emit ORDER_FILLED
+```
+
+**Paper Mode (Default)**
+No real money is ever at risk unless you explicitly set `EXECUTION_MODE=live`. Paper mode simulates fills instantly at market price, tracks positions in memory, and records everything to the database. You can BUY to open longs and SELL to open shorts, reduce positions, close them, or flip from long to short.
+
+An important safety feature: **reducing trades always go through**. If you have an open long position and want to sell to close it, the system bypasses all risk checks (cooldown, throttle, leverage, margin, daily loss). You can always exit a position.
+
+**Live Mode**
+Routes to actual exchange executors (Hyperliquid REST, Drift RPC, Jupiter swap). Requires API keys. Enforces a 300-second cooldown between trades, stricter integrity checks, and execution agent pre-trade validation.
+
+**Fail-Open Execution**
+If a live executor fails, the system falls back to paper mode automatically and logs the failure. Trading never silently fails — you always get a response.
+
+### Stage 5: Monitor (The Dashboard)
+
+A single-page web application with 8 tabs, built with vanilla HTML/CSS/JavaScript and Chart.js. No React, no framework — fast, simple, and maintainable.
+
+**Index Tab**
+The main overview. Shows the Tariff Pressure Index value, shock score, rate of change, and a dual-axis chart of index history. Below that: macro prediction (probability of BTC up, confidence, drivers) and the Macro Terminal showing WITS tariff series, rolling delta, country weights, and correlation heatmap.
+
+**Markets Tab**
+Multi-venue price table showing SOL, BTC, ETH prices from all sources with confidence scores. Funding rate chart. Carry scores. Market microstructure (orderbook imbalance, basis, spread). Solana execution quality. Funding arbitrage signals. Basis monitor. A collapsible data feed status panel showing the health of all 7 data sources.
+
+**Divergence Tab**
+Cross-venue spread chart and table. Shows which assets have price gaps between exchanges, the spread in basis points, and dislocation alerts.
+
+**Stablecoins Tab**
+USDC, USDT, DAI peg status cards. Depeg heatmap. Stress indicators. Peg-break probability. Flow momentum (risk-on/off indicator).
+
+**Strategy Tab**
+Shows which of the 5 trading rules are currently triggered. Adaptive risk weights (how the system is adjusting strategy based on market regime). Portfolio proposal with allocation bars and reasoning.
+
+**Execution Tab**
+Decision Data Status panel (shows data quality before you trade). Order submission form. Open positions table (with side: long/short). PnL attribution. Execution Quality Index. Paper trade history.
+
+**Risk Tab**
+Stress test scenarios (run them on demand). Risk guardrails status. Monte Carlo VaR/CVaR calculator. Regime analysis. Liquidation heatmap (color-coded probability grid).
+
+**Agents Tab**
+All 7 agent signals displayed as cards with confidence badges (color-coded percentage), severity indicators, direction arrows, proposed actions, expandable reasoning sections, and data timestamps. Agent registry showing all agents with their status and descriptions.
+
+**Event Timeline (Always Visible)**
+At the bottom of every tab: a color-coded feed of the last 50 system events. Green for fills, red for errors, yellow for alerts, blue for informational, purple for agent signals. Shows what the system is doing in real time.
+
+---
+
+## Real-Time Architecture
+
+The system uses two communication channels:
+
+**WebSocket (Primary)**
+The frontend connects to `/ws/live` and receives events in real time as they happen — order fills, risk alerts, agent signals, index updates. The connection auto-reconnects with exponential backoff if it drops. When the browser tab is hidden, reconnection is deferred to save resources.
+
+**REST Polling (Backup)**
+Every 5 seconds, the frontend polls the active tab's data endpoints. This ensures data stays current even if the WebSocket connection drops temporarily. Polling pauses when the browser tab is hidden or when auto-refresh is toggled off.
+
+**Event Bus**
+All components communicate through a unified event bus with 61 event types. Events are published to Redis pub/sub (for real-time WebSocket broadcast) and persisted to PostgreSQL (for the event timeline and history). This means nothing is lost — every order, alert, signal, and error is recorded.
+
+---
+
+## Safety Design
+
+The system is built around three safety principles:
+
+**1. Fail-Open**
+If any external API is unreachable, returns errors, or requires credentials that aren't configured, the affected feature degrades gracefully. The rest of the system continues working. No single point of failure can crash the desk.
+
+**2. Paper Mode Default**
+The system ships in paper mode. No real money can be spent unless someone explicitly sets `EXECUTION_MODE=live` and provides exchange API keys. Paper trades are tracked identically to live trades, so you can validate strategies without risk.
+
+**3. You Can Always Exit**
+Position-reducing trades (selling a long, buying to close a short) bypass all risk constraints. Cooldown timers, leverage limits, margin checks, daily loss limits, and throttle flags — none of them can prevent you from closing a position. This ensures you're never trapped in a position by the system's own safety mechanisms.
+
+---
+
+## Technology Stack
+
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| Backend | Python + FastAPI | Fast async API framework, great for WebSocket support |
+| Database | PostgreSQL | Reliable persistence for events, positions, and market data |
+| Cache/PubSub | Redis | Fast in-memory cache for state snapshots + pub/sub for real-time events |
+| Frontend | Vanilla JS + Chart.js | No framework overhead, fast renders, simple to maintain |
+| Server | Uvicorn | ASGI server for async Python |
+| Scheduling | APScheduler | Reliable periodic job execution for data ingestion |
+| Testing | pytest | 98 tests across 6 files |
+
+---
+
+
