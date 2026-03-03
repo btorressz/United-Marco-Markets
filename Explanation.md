@@ -240,3 +240,88 @@ Position-reducing trades (selling a long, buying to close a short) bypass all ri
 ---
 
 
+## Data Flow Diagram
+
+```
+     World Bank WITS ──┐
+     GDELT News ───────┤
+     Pyth Oracle ──────┤
+     Kraken Exchange ──┼──→ Ingest Layer (6 scheduled jobs, all fail-open)
+     CoinGecko ────────┤              │
+     Drift Protocol ───┤              ▼
+     Hyperliquid WS ───┘     Redis State Store (snapshots with TTLs)
+                                      │
+                         ┌────────────┼────────────┐
+                         ▼            ▼            ▼
+                   Compute Layer  Event Bus    WebSocket
+                   (27 modules)   (Redis +     Server
+                         │        Postgres)       │
+                         ▼            │           ▼
+                    API Routes        │      Frontend
+                    (26 endpoints)    │      (real-time
+                         │           │       updates)
+                         ▼           │
+                    Agent Layer      │
+                    (7 agents)       │
+                         │           │
+                         ▼           │
+                    Execution    ◄───┘
+                    Router
+                    (risk check →
+                     price check →
+                     paper/live fill)
+                         │
+                         ▼
+                    PostgreSQL
+                    (events, positions,
+                     market data, orders)
+```
+
+---
+
+## Configuration
+
+All configuration is done through environment variables with safe defaults:
+
+| Variable | Default | What it controls |
+|----------|---------|-----------------|
+| `EXECUTION_MODE` | `paper` | Paper (simulated) or live (real money) trading |
+| `PRICE_FRESHNESS_THRESHOLD_S` | `30` | Maximum age of price data before trades are blocked/degraded |
+| `PRICE_INTEGRITY_BLOCK_LIVE` | `true` | Whether price integrity WARNING blocks live trades |
+| `MAX_LEVERAGE` | `3.0` | Maximum allowed leverage multiplier |
+| `MAX_MARGIN_USAGE` | `0.6` | Maximum fraction of equity used as margin |
+| `MAX_DAILY_LOSS` | `500` | Maximum daily loss in USD before trading is blocked |
+| `COOLDOWN_SECONDS` | `300` | Seconds between trades (live mode only) |
+| `LOG_LEVEL` | `INFO` | Logging verbosity |
+| `ADAPTIVE_WEIGHTS` | `1` | Enable/disable adaptive risk weighting |
+| `HYPERLIQUID_API_KEY` | _(empty)_ | Required for live Hyperliquid trading |
+| `SOLANA_PRIVATE_KEY` | _(empty)_ | Required for live Drift/Jupiter trading |
+| `SOLANA_RPC_URL` | _(empty)_ | Solana RPC endpoint for live execution |
+
+---
+
+## How to Use It
+
+1. **Start the app**: `python main.py` — launches on port 5000
+2. **Open the dashboard**: Navigate to the root URL
+3. **Monitor**: Watch the Index tab for tariff pressure, Markets tab for prices, Agents tab for AI signals
+4. **Paper trade**: Go to the Execution tab, fill in the order form (venue: paper, market: SOL-PERP, side: buy/sell, size, optional price), and submit
+5. **Analyze risk**: Use the Risk tab to run stress tests, Monte Carlo simulations, and view the liquidation heatmap
+6. **Check data quality**: The Decision Data Status panel in the Execution tab shows whether price data is fresh and reliable before you trade
+
+The system runs continuously, collecting data, analyzing markets, and producing signals — whether or not anyone is watching. When you open the dashboard, you see the current state instantly via WebSocket and REST polling.
+
+---
+
+## Testing
+
+98 automated tests verify the system's core logic:
+
+- **Tariff Index calculation** — Weighted composition, edge cases, boundary values
+- **Shock score computation** — Z-score math, spike detection, empty data handling
+- **Divergence detection** — Spread calculations, alert triggering, multi-venue scenarios
+- **Risk engine constraints** — Leverage limits, margin caps, daily loss limits, cooldown behavior, position-reducing bypass
+- **Paper trading** — BUY creates long, SELL creates short, reduce/close/flip positions, event emission, side field correctness
+- **Phase 3 features** — Basis engine, funding arb, stable flow, adaptive weights, portfolio optimizer, liquidation heatmap, execution metrics, Solana liquidity
+
+All tests are unit tests that run without external dependencies (no API calls, no database, no Redis). They complete in under 3 seconds.
