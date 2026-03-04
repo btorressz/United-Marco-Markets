@@ -6,6 +6,9 @@ The United Marco Markets(Tariff Risk Desk) is a real-time trading intelligence p
 
 Think of it as a command center that watches the news, monitors prices across multiple exchanges, runs risk calculations, and tells you what's happening — all in one dashboard.
 
+
+**NOTE** This project is for research and development purposes ONLY at the moment. 
+
 ---
 
 
