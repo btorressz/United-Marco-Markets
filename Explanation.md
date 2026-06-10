@@ -1,16 +1,12 @@
-# United Marco Markets (Tariff Risk Desk) — Full Project Explanation
+# Tariff Risk Desk — Full Project Explanation
 
 ## What Is This?
 
-The United Marco Markets(Tariff Risk Desk) is a real-time trading intelligence platform that connects two worlds that don't usually talk to each other: **global trade policy** (tariffs, sanctions, trade wars) and **cryptocurrency markets** (Bitcoin, Solana, Ethereum, stablecoins). The core idea is that when governments impose tariffs or trade tensions escalate, it creates ripple effects across financial markets — including crypto. This system detects those signals early and helps traders respond.
+The Tariff Risk Desk is a real-time trading intelligence platform that connects two worlds that don't usually talk to each other: **global trade policy** (tariffs, sanctions, trade wars) and **cryptocurrency markets** (Bitcoin, Solana, Ethereum, stablecoins). The core idea is that when governments impose tariffs or trade tensions escalate, it creates ripple effects across financial markets — including crypto. This system detects those signals early and helps traders respond.
 
 Think of it as a command center that watches the news, monitors prices across multiple exchanges, runs risk calculations, and tells you what's happening — all in one dashboard.
 
-
-**NOTE** This project is for research and development purposes ONLY at the moment. 
-
 ---
-
 
 ## The Big Picture
 
@@ -34,7 +30,6 @@ Seven data feeds run continuously in the background, pulling information from ar
 - **Hyperliquid** (real-time WebSocket) — A high-performance crypto exchange. Provides live orderbook data, trade flow, and funding rates.
 
 Every single one of these feeds is **fail-open**: if any API goes down, returns errors, or has missing credentials, the system keeps running. Features that depend on that data simply show "no data" instead of crashing. This is a core design principle — the desk should never go dark.
-
 
 ### Stage 2: Analyze (The Compute Layer)
 
@@ -71,7 +66,6 @@ Runs up to 10,000 simulated price paths using geometric Brownian motion to estim
 - **Conditional VaR (CVaR)** — "If you do lose more than VaR, the average loss would be $Y"
 
 Supports horizons in minutes, hours, or days.
-
 
 **Stablecoin Health Monitor**
 Tracks USDC, USDT, and DAI against their $1.00 peg. Measures depeg in basis points, detects stress conditions, and estimates peg-break probability. When stablecoins start depegging, it's often an early warning of broader market stress.
@@ -241,7 +235,6 @@ Position-reducing trades (selling a long, buying to close a short) bypass all ri
 | Testing | pytest | 98 tests across 6 files |
 
 ---
-
 
 ## Data Flow Diagram
 
