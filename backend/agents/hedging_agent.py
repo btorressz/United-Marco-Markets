@@ -168,3 +168,5 @@ class HedgingAgent:
             })
 
         return signals
+
+        return signals
