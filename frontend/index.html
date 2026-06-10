@@ -489,6 +489,39 @@
         </div>
       </div>
 
+
+      <!-- EQUITIES TAB -->
+      <div id="tab-equities" class="tab-panel">
+        <div class="section-title">Equity Market Overview</div>
+        <div class="metric-row" id="equity-overview-cards"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Selected Ticker Chart</span><span id="equity-provider-badge" class="freshness-badge nodata"><span class="freshness-dot"></span> LOADING</span></div>
+            <select id="equity-ticker-select" class="form-select" style="max-width:140px;margin-bottom:8px"><option>SPY</option><option>QQQ</option><option>AAPL</option><option>TSLA</option><option>NVDA</option><option>CAT</option></select>
+            <div class="chart-container"><canvas id="equity-chart"></canvas></div>
+          </div>
+          <div class="card" id="equity-cross-asset-panel"><div class="empty-state"><div class="empty-state-text">Loading cross-asset risk...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card"><div class="card-header"><span class="card-title">Sector ETF Heatmap</span></div><div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Sector</th><th>5D</th><th>Vol</th><th>RS vs SPY</th></tr></thead><tbody id="equity-sector-tbody"></tbody></table></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">Tariff-Sensitive Watchlist</span></div><div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Sector</th><th>Price</th><th>1M</th><th>Vol/Avg</th></tr></thead><tbody id="equity-watchlist-tbody"></tbody></table></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="equity-tariff-panel"><div class="empty-state"><div class="empty-state-text">Loading tariff exposure...</div></div></div>
+          <div class="card" id="equity-agent-panel"><div class="empty-state"><div class="empty-state-text">Loading equity agent signals...</div></div></div>
+        </div>
+        <div class="section-title">Data Quality</div>
+        <div class="card" id="data-quality-panel"><div class="empty-state"><div class="empty-state-text">Loading data quality...</div></div></div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="macro-sensitivity-panel"><div class="empty-state"><div class="empty-state-text">Loading tariff beta / macro sensitivity...</div></div></div>
+          <div class="card" id="cross-asset-correlation-panel"><div class="empty-state"><div class="empty-state-text">Loading cross-asset correlations...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="watchlist-builder-panel"><div class="empty-state"><div class="empty-state-text">Loading watchlists...</div></div></div>
+          <div class="card" id="institutional-reports-panel"><div class="empty-state"><div class="empty-state-text">Loading reports...</div></div></div>
+        </div>
+      </div>
+
       <!-- RISK TAB -->
       <div id="tab-risk" class="tab-panel">
         <div id="throttle-banner" class="throttle-banner inactive">
@@ -637,6 +670,16 @@
 
         <div class="section-title">Agent Registry</div>
         <div id="agent-registry"></div>
+
+        <div class="section-title">Agent Consensus</div>
+        <div class="card" id="agent-consensus-panel"><div class="empty-state"><div class="empty-state-text">Loading agent consensus...</div></div></div>
+        <div class="section-title">Signal Outcome Attribution</div>
+        <div class="card" id="signal-attribution-panel"><div class="empty-state"><div class="empty-state-text">Loading signal attribution...</div></div></div>
+
+        <div class="section-title">Agent Memory / Performance</div>
+        <div class="card" id="agent-performance-panel"><div class="empty-state"><div class="empty-state-text">Loading agent performance...</div></div></div>
+        <div class="section-title">Signal History</div>
+        <div class="card" id="agent-history-panel"><div class="empty-state"><div class="empty-state-text">Loading signal history...</div></div></div>
       </div>
 
     </div>

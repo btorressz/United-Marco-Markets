@@ -78,3 +78,82 @@ def test_institutional_endpoint_shapes_fail_open():
     resp = client.post("/api/scenario/run", json={"tariff_index_change": 10})
     assert resp.status_code == 200
     assert "portfolio_pnl_impact" in resp.json()
+
+
+def test_new_routers_registered_once_and_existing_routes_present():
+    from collections import Counter
+    from main import app
+    expected = {
+        "/api/macro/events", "/api/macro/events/impact", "/api/macro/events/{event_id}/reaction",
+        "/api/macro-sensitivity/assets", "/api/macro-sensitivity/{ticker}",
+        "/api/cross-asset/correlations", "/api/cross-asset/contagion",
+        "/api/scenario/templates", "/api/scenario/run", "/api/explain/portfolio",
+        "/api/explain/recommendation/{rec_id}", "/api/signals/outcomes", "/api/signals/attribution",
+        "/api/watchlists", "/api/reports/daily-brief", "/api/equities/overview", "/api/strategy/performance",
+        "/api/index/latest", "/api/execution/order", "/api/risk/status",
+    }
+    routes = [(tuple(sorted(route.methods)), route.path) for route in app.routes if hasattr(route, "methods")]
+    counts = Counter(routes)
+    assert not [item for item, count in counts.items() if count > 1]
+    paths = {path for _methods, path in routes}
+    assert expected.issubset(paths)
+
+
+def test_all_requested_institutional_endpoints_available_with_safe_json():
+    from fastapi.testclient import TestClient
+    from main import app
+    client = TestClient(app)
+    events = client.get("/api/macro/events").json()["events"]
+    event_id = events[0]["id"] if events else "fallback"
+    checks = [
+        ("GET", "/api/macro/events", None),
+        ("GET", "/api/macro/events/impact", None),
+        ("GET", f"/api/macro/events/{event_id}/reaction", None),
+        ("GET", "/api/macro-sensitivity/assets", None),
+        ("GET", "/api/cross-asset/correlations", None),
+        ("GET", "/api/cross-asset/contagion", None),
+        ("GET", "/api/scenario/templates", None),
+        ("POST", "/api/scenario/run", {"tariff_index_change": 10}),
+        ("GET", "/api/hedge/cross-asset", None),
+        ("POST", "/api/hedge/preview", {"tariff_beta": 0.8}),
+        ("GET", "/api/explain/portfolio", None),
+        ("GET", "/api/agents/consensus", None),
+        ("GET", "/api/signals/outcomes", None),
+        ("GET", "/api/signals/attribution", None),
+        ("GET", "/api/watchlists", None),
+        ("GET", "/api/reports/daily-brief", None),
+        ("GET", "/api/reports/tariff-risk", None),
+        ("GET", "/api/reports/portfolio-risk", None),
+        ("GET", "/api/reports/agent-signals", None),
+    ]
+    for method, path, body in checks:
+        response = client.request(method, path, json=body)
+        assert response.status_code == 200, path
+        assert isinstance(response.json(), dict), path
+
+
+def test_provider_storage_and_empty_dataset_fail_open(monkeypatch):
+    from backend.compute.cross_asset_intelligence import compute_correlations
+    from backend.compute.macro_sensitivity import score_assets
+    from backend.compute.macro_events import build_macro_events
+    from backend.core.state_store import StateStore
+    from backend.ingest import stooq_ingest
+    import backend.api.health_routes as health_routes
+
+    def raise_urlopen(*_args, **_kwargs):
+        raise RuntimeError("stooq unavailable")
+
+    monkeypatch.setattr(stooq_ingest.urllib.request, "urlopen", raise_urlopen)
+    stooq = stooq_ingest.fetch_history("SPY")
+    assert stooq["degraded"] is True
+    assert stooq["history"]
+
+    assert build_macro_events(None, None)["degraded"] is True
+    assert compute_correlations({})["degraded"] is True
+    assert score_assets([], 0, 0, True)["assets"] == []
+    assert StateStore(redis_url="redis://localhost:19999").get_snapshot("missing") is None
+
+    monkeypatch.setattr(health_routes, "check_connection", lambda: False)
+    health = health_routes.health_check().model_dump()
+    assert health["database"] is False
+    assert health["status"] == "degraded"

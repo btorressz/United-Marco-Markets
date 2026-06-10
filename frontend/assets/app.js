@@ -21,6 +21,9 @@ const App = (() => {
     initStressTestForm();
     initMCForm();
     initBacktestForm();
+    initReplaySimForm();
+    initScenarioForm();
+    initEquityControls();
     initFeedStatusToggle();
     initAutoRefreshToggle();
     initTimeframeSelectors();
@@ -436,6 +439,78 @@ const App = (() => {
       trades: trades.status === 'fulfilled' ? trades.value : null,
       eqi: eqi.status === 'fulfilled' ? eqi.value : null,
     });
+    UI.renderExecutionEnhancements({ preview: preview.status === 'fulfilled' ? preview.value : null, conditional: conditional.status === 'fulfilled' ? conditional.value : null, smart: smart.status === 'fulfilled' ? smart.value : null });
+  }
+
+
+
+
+
+  function initReplaySimForm() {
+    const form = document.getElementById('replay-sim-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const result = await API.postReplayTradeSimulation({ scenario: form.scenario.value, initial_capital: parseFloat(form.initial_capital.value || '100000') });
+        UI.renderReplaySimulation(result);
+      } catch (err) {
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'replay_sim', ts: new Date().toISOString(), payload: { message: err.message } }, true);
+      }
+    });
+  }
+
+  function initEquityControls() {
+    const select = document.getElementById('equity-ticker-select');
+    if (select) select.addEventListener('change', () => refreshEquities());
+  }
+
+
+  function initScenarioForm() {
+    const form = document.getElementById('scenario-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const body = {
+          tariff_index_change: parseFloat(form.tariff_index_change.value || '0'),
+          gdelt_shock_change: parseFloat(form.gdelt_shock_change.value || '0'),
+          equity_drawdown: parseFloat(form.equity_drawdown.value || '0'),
+          crypto_drawdown: parseFloat(form.crypto_drawdown.value || '0'),
+        };
+        const result = await API.postScenarioRun(body);
+        UI.renderScenarioResult(result);
+      } catch (err) {
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'scenario', ts: new Date().toISOString(), payload: { message: err.message } }, true);
+      }
+    });
+  }
+
+  async function refreshEquities() {
+    const ticker = (document.getElementById('equity-ticker-select') || {}).value || 'SPY';
+    const [overview, history, risk, tariff, cross, quality, sensitivity, correlations, contagion, watchlists, dailyBrief, tariffReport] = await Promise.allSettled([
+      API.getEquitiesOverview(),
+      API.getEquityHistory(ticker),
+      API.getEquityRisk(),
+      API.getEquityTariffExposure(),
+      API.getEquityCrossAsset(),
+      API.getDataQuality(),
+      API.getMacroSensitivityAssets(),
+      API.getCrossAssetCorrelations(),
+      API.getCrossAssetContagion(),
+      API.getWatchlists(),
+      API.getDailyBriefReport(),
+      API.getTariffRiskReport(),
+    ]);
+    UI.renderEquitiesTab({
+      overview: overview.status === 'fulfilled' ? overview.value : null,
+      history: history.status === 'fulfilled' ? history.value : null,
+      risk: risk.status === 'fulfilled' ? risk.value : null,
+      tariff: tariff.status === 'fulfilled' ? tariff.value : null,
+      cross: cross.status === 'fulfilled' ? cross.value : null,
+      quality: quality.status === 'fulfilled' ? quality.value : null,
+    });
+    UI.renderInstitutionalLayer({ sensitivity: sensitivity.status === 'fulfilled' ? sensitivity.value : null, correlations: correlations.status === 'fulfilled' ? correlations.value : null, contagion: contagion.status === 'fulfilled' ? contagion.value : null, watchlists: watchlists.status === 'fulfilled' ? watchlists.value : null, dailyBrief: dailyBrief.status === 'fulfilled' ? dailyBrief.value : null, tariffReport: tariffReport.status === 'fulfilled' ? tariffReport.value : null });
   }
 
   async function refreshRisk() {
@@ -463,14 +538,20 @@ const App = (() => {
   }
 
   async function refreshAgents() {
-    const [signals, registry] = await Promise.allSettled([
+    const [signals, registry, perf, hist, consensus, attribution] = await Promise.allSettled([
       API.getAgentSignals(),
       API.getAgentRegistry(),
+      API.getAgentsPerformance(),
+      API.getAgentsHistory(),
+      API.getAgentsConsensus(),
+      API.getSignalAttribution(),
     ]);
     UI.renderAgentsTab({
       signals: signals.status === 'fulfilled' ? signals.value : null,
       registry: registry.status === 'fulfilled' ? registry.value : null,
     });
+    UI.renderAgentMemory(perf.status === 'fulfilled' ? perf.value : null, hist.status === 'fulfilled' ? hist.value : null);
+    UI.renderAgentConsensusAndAttribution(consensus.status === 'fulfilled' ? consensus.value : null, attribution.status === 'fulfilled' ? attribution.value : null);
   }
 
   async function refreshHealth() {

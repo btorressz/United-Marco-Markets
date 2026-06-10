@@ -88,6 +88,16 @@ def create_app():
     from backend.api.backtest_routes import router as backtest_router
     from backend.api.volatility_routes import router as volatility_router
     from backend.api.portfolio_risk_routes import router as portfolio_risk_router
+    from backend.api.equities_routes import router as equities_router
+    from backend.api.strategy_routes import router as strategy_router
+    from backend.api.macro_routes import router as macro_router
+    from backend.api.macro_sensitivity_routes import router as macro_sensitivity_router
+    from backend.api.cross_asset_routes import router as cross_asset_router
+    from backend.api.scenario_routes import router as scenario_router
+    from backend.api.explain_routes import router as explain_router
+    from backend.api.signals_routes import router as signals_router
+    from backend.api.watchlists_routes import router as watchlists_router
+    from backend.api.reports_routes import router as reports_router
 
     app.include_router(index_router)
     app.include_router(markets_router)
@@ -120,6 +130,16 @@ def create_app():
     app.include_router(backtest_router)
     app.include_router(volatility_router)
     app.include_router(portfolio_risk_router)
+    app.include_router(equities_router)
+    app.include_router(strategy_router)
+    app.include_router(macro_router)
+    app.include_router(macro_sensitivity_router)
+    app.include_router(cross_asset_router)
+    app.include_router(scenario_router)
+    app.include_router(explain_router)
+    app.include_router(signals_router)
+    app.include_router(watchlists_router)
+    app.include_router(reports_router)
 
     @app.get("/")
     def root():
