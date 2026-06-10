@@ -20,6 +20,7 @@ const App = (() => {
     initOrderForm();
     initStressTestForm();
     initMCForm();
+    initBacktestForm();
     initFeedStatusToggle();
     initAutoRefreshToggle();
     initTimeframeSelectors();
@@ -250,6 +251,38 @@ const App = (() => {
     });
   }
 
+  function initBacktestForm() {
+    const form = document.getElementById('backtest-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Running...';
+      const panel = document.getElementById('backtest-result-panel');
+      if (panel) panel.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:12px">Running backtest...</div>';
+      try {
+        const config = {
+          strategy: form.strategy.value,
+          window_days: parseInt(form.window_days.value),
+          initial_capital: parseFloat(form.initial_capital.value),
+          venue: form.venue.value,
+          fee_bps: parseFloat(form.fee_bps.value),
+          slippage_bps: parseFloat(form.slippage_bps.value),
+        };
+        const result = await API.postBacktestRun(config);
+        UI.renderBacktestPanel(result);
+        UI.addEventToTimeline({ event_type: 'BACKTEST_COMPLETED', source: 'user', ts: new Date().toISOString(), payload: { message: `${config.strategy} ${config.window_days}d: ${result.total_return_pct >= 0 ? '+' : ''}${(result.total_return_pct || 0).toFixed(2)}%` } }, true);
+      } catch (err) {
+        if (panel) panel.innerHTML = `<div style="font-size:12px;color:var(--accent-red);padding:12px">Backtest failed: ${err.message}</div>`;
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'backtest', ts: new Date().toISOString(), payload: { message: 'Backtest failed: ' + err.message } }, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Run Backtest';
+      }
+    });
+  }
+
   function initFeedStatusToggle() {
     const btn = document.getElementById('feed-status-toggle');
     const panel = document.getElementById('feed-status-panel');
@@ -356,17 +389,21 @@ const App = (() => {
   }
 
   async function refreshStrategy() {
-    const [evaluation, status, adaptiveWeights, portfolio] = await Promise.allSettled([
+    const [evaluation, status, adaptiveWeights, portfolio, allocation, mlPrediction] = await Promise.allSettled([
       API.getRulesEvaluation(),
       API.getRulesStatus(),
       API.getAdaptiveWeights(),
       API.getPortfolioProposal(),
+      API.getAllocationLatest(),
+      API.getMLPredictionLatest(),
     ]);
     UI.renderStrategyTab({
       evaluation: evaluation.status === 'fulfilled' ? evaluation.value : null,
       status: status.status === 'fulfilled' ? status.value : null,
       adaptiveWeights: adaptiveWeights.status === 'fulfilled' ? adaptiveWeights.value : null,
       portfolio: portfolio.status === 'fulfilled' ? portfolio.value : null,
+      allocation: allocation.status === 'fulfilled' ? allocation.value : null,
+      mlPrediction: mlPrediction.status === 'fulfilled' ? mlPrediction.value : null,
     });
   }
 
@@ -392,17 +429,23 @@ const App = (() => {
   }
 
   async function refreshRisk() {
-    const [status, guardrails, heatmap, analogs] = await Promise.allSettled([
+    const [status, guardrails, heatmap, analogs, portfolioRisk, volRegime, volRecs] = await Promise.allSettled([
       API.getRiskStatus(),
       API.getGuardrails(),
       API.getLiquidationHeatmap(),
       API.getRegimeAnalogs(),
+      API.getPortfolioRiskSummary(),
+      API.getVolRegime(),
+      API.getVolRecommendations(),
     ]);
     UI.renderRiskTab({
       status: status.status === 'fulfilled' ? status.value : null,
       guardrails: guardrails.status === 'fulfilled' ? guardrails.value : null,
       heatmap: heatmap.status === 'fulfilled' ? heatmap.value : null,
       analogs: analogs.status === 'fulfilled' ? analogs.value : null,
+      portfolioRisk: portfolioRisk.status === 'fulfilled' ? portfolioRisk.value : null,
+      volRegime: volRegime.status === 'fulfilled' ? volRegime.value : null,
+      volRecommendations: volRecs.status === 'fulfilled' ? volRecs.value : null,
     });
   }
 
