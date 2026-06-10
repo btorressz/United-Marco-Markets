@@ -321,3 +321,11 @@ The system runs continuously, collecting data, analyzing markets, and producing 
 - **Phase 3 features** — Basis engine, funding arb, stable flow, adaptive weights, portfolio optimizer, liquidation heatmap, execution metrics, Solana liquidity
 
 All tests are unit tests that run without external dependencies (no API calls, no database, no Redis). They complete in under 3 seconds.
+
+## What the Equity Expansion Does
+
+The new equity layer lets the Tariff Risk Desk connect trade-policy risk to public stock-market instruments. It watches broad ETFs, sector ETFs, semiconductor ETFs, China/EM ETFs, and individual companies whose margins or supply chains may be sensitive to tariffs. Every equity score includes human-readable reasoning rather than opaque model output.
+
+The tariff exposure score combines stable heuristics: sector sensitivity, supply-chain/country sensitivity, import/export sensitivity, WITS tariff pressure when present, GDELT shock or tone when present, recent price weakness, volume spikes, volatility spikes, and weakness versus SPY. If WITS or GDELT is unavailable, the score still returns using defaults and marks itself degraded.
+
+The execution changes are safety-oriented. The allocator can now say how much of a proposed paper order is allowed under capital caps and portfolio constraints. Advanced order types and TWAP/VWAP are represented in paper/proposal mode only. The system can simulate decisions in replay, but it does not autonomously execute live trades.

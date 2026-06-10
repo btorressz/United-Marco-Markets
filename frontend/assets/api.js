@@ -124,5 +124,23 @@ const API = (() => {
     getPortfolioRiskExposures: () => fetchJSON('/api/portfolio-risk/exposures'),
 
     getRedisHealth: () => fetchJSON('/api/health/redis'),
+
+    getDataQuality: () => fetchJSON('/api/health/data-quality'),
+    getStrategyPerformance: () => fetchJSON('/api/strategy/performance'),
+    postAllocationExecutionPreview: (body) => postJSON('/api/allocation/execution-preview', body),
+    postConditionalOrder: (body) => postJSON('/api/execution/conditional-order', body),
+    getConditionalOrders: () => fetchJSON('/api/execution/conditional-orders'),
+    postEvaluateConditionalOrders: (body) => postJSON('/api/execution/conditional-orders/evaluate', body || {}),
+    postSmartOrder: (body) => postJSON('/api/execution/smart-order', body),
+    getSmartOrders: () => fetchJSON('/api/execution/smart-orders'),
+    postReplayTradeSimulation: (body) => postJSON('/api/replay/trade-simulation', body),
+    getAgentsPerformance: () => fetchJSON('/api/agents/performance'),
+    getAgentsHistory: () => fetchJSON('/api/agents/history'),
+    getEquitiesOverview: () => fetchJSON('/api/equities/overview'),
+    getEquityHistory: (ticker = 'SPY') => fetchJSON(`/api/equities/history/${ticker}`),
+    getEquityRisk: () => fetchJSON('/api/equities/risk'),
+    getEquityTariffExposure: () => fetchJSON('/api/equities/tariff-exposure'),
+    getEquitySectorRotation: () => fetchJSON('/api/equities/sector-rotation'),
+    getEquityCrossAsset: () => fetchJSON('/api/equities/cross-asset'),
   };
 })();

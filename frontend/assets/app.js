@@ -21,6 +21,8 @@ const App = (() => {
     initStressTestForm();
     initMCForm();
     initBacktestForm();
+    initReplaySimForm();
+    initEquityControls();
     initFeedStatusToggle();
     initAutoRefreshToggle();
     initTimeframeSelectors();
@@ -120,6 +122,7 @@ const App = (() => {
     window._fundingChart = Charts.createFundingChart('funding-chart');
     window._divergenceChart = Charts.createDivergenceChart('divergence-chart');
     window._mcChart = Charts.createMCChart('mc-chart');
+    window._equityChart = Charts.createEquityChart('equity-chart');
   }
 
   function initWebSocket() {
@@ -311,6 +314,7 @@ const App = (() => {
         case 'stablecoins': await refreshStablecoins(); break;
         case 'strategy': await refreshStrategy(); break;
         case 'execution': await refreshExecution(); break;
+        case 'equities': await refreshEquities(); break;
         case 'risk': await refreshRisk(); break;
         case 'agents': await refreshAgents(); break;
       }
@@ -389,13 +393,14 @@ const App = (() => {
   }
 
   async function refreshStrategy() {
-    const [evaluation, status, adaptiveWeights, portfolio, allocation, mlPrediction] = await Promise.allSettled([
+    const [evaluation, status, adaptiveWeights, portfolio, allocation, mlPrediction, strategyPerformance] = await Promise.allSettled([
       API.getRulesEvaluation(),
       API.getRulesStatus(),
       API.getAdaptiveWeights(),
       API.getPortfolioProposal(),
       API.getAllocationLatest(),
       API.getMLPredictionLatest(),
+      API.getStrategyPerformance(),
     ]);
     UI.renderStrategyTab({
       evaluation: evaluation.status === 'fulfilled' ? evaluation.value : null,
@@ -405,16 +410,20 @@ const App = (() => {
       allocation: allocation.status === 'fulfilled' ? allocation.value : null,
       mlPrediction: mlPrediction.status === 'fulfilled' ? mlPrediction.value : null,
     });
+    if (strategyPerformance.status === 'fulfilled') UI.renderStrategyPerformance(strategyPerformance.value);
   }
 
   async function refreshExecution() {
-    const [positions, trades, eqi, integrity, health, indexData] = await Promise.allSettled([
+    const [positions, trades, eqi, integrity, health, indexData, preview, conditional, smart] = await Promise.allSettled([
       API.getPositions(),
       API.getPaperTrades(),
       API.getEQI(),
       API.getIntegrity(),
       API.getHealth(),
       API.getIndexLatest(),
+      API.postAllocationExecutionPreview({ venue: 'paper', market: 'SOL-PERP', side: 'buy', size: 1, price: 150 }),
+      API.getConditionalOrders(),
+      API.getSmartOrders(),
     ]);
     UI.renderDecisionDataPanel({
       integrity: integrity.status === 'fulfilled' ? integrity.value : null,
@@ -425,6 +434,50 @@ const App = (() => {
       positions: positions.status === 'fulfilled' ? positions.value : null,
       trades: trades.status === 'fulfilled' ? trades.value : null,
       eqi: eqi.status === 'fulfilled' ? eqi.value : null,
+    });
+    UI.renderExecutionEnhancements({ preview: preview.status === 'fulfilled' ? preview.value : null, conditional: conditional.status === 'fulfilled' ? conditional.value : null, smart: smart.status === 'fulfilled' ? smart.value : null });
+  }
+
+
+
+
+
+  function initReplaySimForm() {
+    const form = document.getElementById('replay-sim-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const result = await API.postReplayTradeSimulation({ scenario: form.scenario.value, initial_capital: parseFloat(form.initial_capital.value || '100000') });
+        UI.renderReplaySimulation(result);
+      } catch (err) {
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'replay_sim', ts: new Date().toISOString(), payload: { message: err.message } }, true);
+      }
+    });
+  }
+
+  function initEquityControls() {
+    const select = document.getElementById('equity-ticker-select');
+    if (select) select.addEventListener('change', () => refreshEquities());
+  }
+
+  async function refreshEquities() {
+    const ticker = (document.getElementById('equity-ticker-select') || {}).value || 'SPY';
+    const [overview, history, risk, tariff, cross, quality] = await Promise.allSettled([
+      API.getEquitiesOverview(),
+      API.getEquityHistory(ticker),
+      API.getEquityRisk(),
+      API.getEquityTariffExposure(),
+      API.getEquityCrossAsset(),
+      API.getDataQuality(),
+    ]);
+    UI.renderEquitiesTab({
+      overview: overview.status === 'fulfilled' ? overview.value : null,
+      history: history.status === 'fulfilled' ? history.value : null,
+      risk: risk.status === 'fulfilled' ? risk.value : null,
+      tariff: tariff.status === 'fulfilled' ? tariff.value : null,
+      cross: cross.status === 'fulfilled' ? cross.value : null,
+      quality: quality.status === 'fulfilled' ? quality.value : null,
     });
   }
 
@@ -450,14 +503,17 @@ const App = (() => {
   }
 
   async function refreshAgents() {
-    const [signals, registry] = await Promise.allSettled([
+    const [signals, registry, perf, hist] = await Promise.allSettled([
       API.getAgentSignals(),
       API.getAgentRegistry(),
+      API.getAgentsPerformance(),
+      API.getAgentsHistory(),
     ]);
     UI.renderAgentsTab({
       signals: signals.status === 'fulfilled' ? signals.value : null,
       registry: registry.status === 'fulfilled' ? registry.value : null,
     });
+    UI.renderAgentMemory(perf.status === 'fulfilled' ? perf.value : null, hist.status === 'fulfilled' ? hist.value : null);
   }
 
   async function refreshHealth() {

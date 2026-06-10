@@ -57,3 +57,24 @@ Before every trade:
 - `test_risk_throttle.py`: 18 passed (was 16, added 2)
 - `test_new_features.py`: 25 passed
 - `test_paper_trading.py`: 19 passed (new file)
+
+## 2026-06-10 — Equity Market + Execution Safety Expansion
+
+### Added
+- Equity ingestion modules for yfinance and Stooq with deterministic mock/demo fallback data.
+- Equity analytics for returns, volatility, drawdown, moving averages, RSI, beta proxy, relative strength, volume spike, sectors, provider status, and timestamps.
+- Equity tariff exposure scoring aligned with WITS/GDELT where available and safe defaults when unavailable.
+- Equity risk, tariff exposure, and sector rotation heuristic agents.
+- `/api/equities/overview`, `/api/equities/quote/{ticker}`, `/api/equities/history/{ticker}`, `/api/equities/watchlist`, `/api/equities/risk`, `/api/equities/tariff-exposure`, `/api/equities/sector-rotation`, and `/api/equities/cross-asset`.
+- `/api/allocation/execution-preview` for proposal-only pre-trade sizing checks.
+- Paper-mode conditional order endpoints for stop loss, take profit, trailing stop, bracket orders, evaluation, listing, and cancellation.
+- Paper-mode TWAP/VWAP smart order endpoints with slice schedules and slippage estimates.
+- `/api/strategy/performance`, `/api/health/data-quality`, `/api/replay/trade-simulation`, `/api/agents/performance`, and `/api/agents/history`.
+- New Equities frontend tab and additive Strategy, Execution, Risk, and Agents panels.
+- Tests covering equity provider fallback, analytics, tariff exposure scoring, endpoint fail-open behavior, agent signal structure, and allocation execution preview.
+
+### Safety
+- Paper mode remains default.
+- No autonomous live trading was added.
+- Equity providers fail open to degraded status and demo fallback data.
+- Existing endpoints, tabs, functions, files, and CSS classes are preserved.

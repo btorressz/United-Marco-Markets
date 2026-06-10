@@ -203,3 +203,13 @@ Key optional settings:
 
 The system has 77 automated tests covering index calculation, shock detection, divergence alerts, risk throttling, basis engine, funding arbitrage, stable flow, adaptive weights, portfolio optimization, liquidation heatmap, execution metrics, and Solana liquidity scoring.
 The system has 77 automated tests covering index calculation, shock detection, divergence alerts, risk throttling, basis engine, funding arbitrage, stable flow, adaptive weights, portfolio optimization, liquidation heatmap, execution metrics, and Solana liquidity scoring.
+
+## Equity + Trading Desk Safety Phase
+
+The desk now includes a stock-market view focused on tariff-sensitive equities. It can show broad ETFs like SPY and QQQ, sector ETFs, and individual companies that may react to tariffs, supply-chain pressure, China exposure, commodity moves, or macro shocks. The equity data layer is deliberately fail-open: it tries yfinance first, can use Stooq for daily history, and always falls back to deterministic demo data so the app continues to work without API keys or external connectivity.
+
+The system also adds safer paper-mode execution planning. Allocator output can now be translated into a pre-trade sizing preview that checks proposed order size against target allocation, current allocation, venue caps, asset caps, portfolio risk, available cash, and current exposure. It returns allowed size, suggested size, warnings, and reasoning, but never auto-trades.
+
+Paper-mode advanced orders now include stop-loss, take-profit, trailing-stop, and bracket-order records. Smart execution can generate TWAP/VWAP slice schedules with estimated slippage and progress tracking. These are proposal/paper-mode features and do not change live trading behavior.
+
+Strategy performance, data quality, replay-to-trade simulation, and agent memory are now visible through new API endpoints and frontend panels. Agent behavior remains deterministic and explainable.
