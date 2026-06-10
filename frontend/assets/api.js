@@ -15,6 +15,24 @@ const API = (() => {
     }
   }
 
+  async function writeJSON(path, method, body) {
+    try {
+      const res = await fetch(BASE + path, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+      return await res.json();
+    } catch (err) {
+      console.warn(`[API] ${method} ${path}: ${err.message}`);
+      throw err;
+    }
+  }
+
+  async function putJSON(path, body) { return writeJSON(path, 'PUT', body); }
+  async function deleteJSON(path) { return writeJSON(path, 'DELETE'); }
+
   async function postJSON(path, body) {
     try {
       const res = await fetch(BASE + path, {
@@ -124,23 +142,5 @@ const API = (() => {
     getPortfolioRiskExposures: () => fetchJSON('/api/portfolio-risk/exposures'),
 
     getRedisHealth: () => fetchJSON('/api/health/redis'),
-
-    getDataQuality: () => fetchJSON('/api/health/data-quality'),
-    getStrategyPerformance: () => fetchJSON('/api/strategy/performance'),
-    postAllocationExecutionPreview: (body) => postJSON('/api/allocation/execution-preview', body),
-    postConditionalOrder: (body) => postJSON('/api/execution/conditional-order', body),
-    getConditionalOrders: () => fetchJSON('/api/execution/conditional-orders'),
-    postEvaluateConditionalOrders: (body) => postJSON('/api/execution/conditional-orders/evaluate', body || {}),
-    postSmartOrder: (body) => postJSON('/api/execution/smart-order', body),
-    getSmartOrders: () => fetchJSON('/api/execution/smart-orders'),
-    postReplayTradeSimulation: (body) => postJSON('/api/replay/trade-simulation', body),
-    getAgentsPerformance: () => fetchJSON('/api/agents/performance'),
-    getAgentsHistory: () => fetchJSON('/api/agents/history'),
-    getEquitiesOverview: () => fetchJSON('/api/equities/overview'),
-    getEquityHistory: (ticker = 'SPY') => fetchJSON(`/api/equities/history/${ticker}`),
-    getEquityRisk: () => fetchJSON('/api/equities/risk'),
-    getEquityTariffExposure: () => fetchJSON('/api/equities/tariff-exposure'),
-    getEquitySectorRotation: () => fetchJSON('/api/equities/sector-rotation'),
-    getEquityCrossAsset: () => fetchJSON('/api/equities/cross-asset'),
   };
 })();

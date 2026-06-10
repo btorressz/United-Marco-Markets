@@ -390,37 +390,3 @@ All keys use `desk:` prefix with TTLs. State store also supports legacy `index:l
 | `funding_arb:latest` | 120s | Funding arb signal |
 | `basis:latest` | 120s | Basis spreads |
 | `stablecoin:health:latest` | 120s | Stablecoin health |
-
-## Equity + Execution Safety Expansion Map
-
-### New backend modules
-- `backend/ingest/yfinance_ingest.py` — optional yfinance MVP research-grade equity provider with deterministic demo fallback and equity universe constants.
-- `backend/ingest/stooq_ingest.py` — simple Stooq EOD CSV fallback, also fail-open to demo data.
-- `backend/compute/equity_analytics.py` — equity return, volatility, drawdown, moving average, RSI, beta proxy, relative strength, and volume analytics.
-- `backend/compute/equity_tariff_exposure.py` — transparent tariff exposure scoring using sector, supply-chain, import/export, WITS, GDELT, price reaction, volume, volatility, and relative weakness inputs.
-- `backend/agents/equity_risk_agent.py` — emits unusual volume, relative weakness, and risk-off equity signals.
-- `backend/agents/tariff_exposure_agent.py` — emits high tariff-risk equity signals from exposure scores.
-- `backend/agents/sector_rotation_agent.py` — emits sector rotation warnings from sector return clusters.
-- `backend/api/equities_routes.py` — registers all `/api/equities/*` endpoints.
-- `backend/api/strategy_routes.py` — adds `/api/strategy/performance`.
-
-### Extended backend modules
-- `main.py` now registers the equities and strategy routers.
-- `backend/compute/capital_allocator.py` now includes `execution_preview()` for proposal-only allocation-to-execution sizing checks.
-- `backend/api/allocation_routes.py` now exposes `POST /api/allocation/execution-preview`.
-- `backend/compute/smart_execution.py` now includes `create_smart_order()` for TWAP/VWAP schedules.
-- `backend/api/execution_routes.py` now exposes conditional paper orders and smart paper orders.
-- `backend/api/health_routes.py` now exposes `/api/health/data-quality`.
-- `backend/api/replay_routes.py` now exposes `/api/replay/trade-simulation`.
-- `backend/api/agents_routes.py` now exposes `/api/agents/performance` and `/api/agents/history`.
-- `backend/data/migrations.sql` now includes safe `conditional_orders` and `agent_signal_history` table creation.
-
-### Frontend additions
-- `frontend/index.html` adds the Equities tab and additive panels for strategy performance, replay simulation, allocation execution preview, advanced orders, and agent memory.
-- `frontend/assets/api.js` adds client helpers for equities, data quality, strategy performance, allocation preview, conditional orders, smart orders, replay simulation, and agent memory.
-- `frontend/assets/charts.js` adds a Chart.js equity line chart helper.
-- `frontend/assets/ui.js` adds renderers for the Equities tab and new Strategy/Execution/Agents panels.
-- `frontend/assets/app.js` orchestrates polling and form submission for the new panels without changing WebSocket behavior.
-
-### Tests
-- `tests/test_equities_features.py` validates yfinance fallback, equity analytics, tariff exposure scoring with and without WITS/GDELT, equity endpoint fail-open JSON responses, agent signal structure, data quality fail-open behavior, and allocation execution preview structure.
