@@ -79,6 +79,15 @@ def create_app():
     from backend.api.stable_flow_routes import router as stable_flow_router
     from backend.api.portfolio_routes import router as portfolio_router
     from backend.api.liquidation_routes import router as liquidation_router
+    from backend.api.sandbox_routes import router as sandbox_router
+    from backend.api.replay_routes import router as replay_router
+    from backend.api.slippage_routes import router as slippage_router
+    from backend.api.hedge_routes import router as hedge_router
+    from backend.api.allocation_routes import router as allocation_router
+    from backend.api.ml_routes import router as ml_router
+    from backend.api.backtest_routes import router as backtest_router
+    from backend.api.volatility_routes import router as volatility_router
+    from backend.api.portfolio_risk_routes import router as portfolio_risk_router
 
     app.include_router(index_router)
     app.include_router(markets_router)
@@ -102,6 +111,15 @@ def create_app():
     app.include_router(stable_flow_router)
     app.include_router(portfolio_router)
     app.include_router(liquidation_router)
+    app.include_router(sandbox_router)
+    app.include_router(replay_router)
+    app.include_router(slippage_router)
+    app.include_router(hedge_router)
+    app.include_router(allocation_router)
+    app.include_router(ml_router)
+    app.include_router(backtest_router)
+    app.include_router(volatility_router)
+    app.include_router(portfolio_risk_router)
 
     @app.get("/")
     def root():
@@ -117,3 +135,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", "5000"))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
