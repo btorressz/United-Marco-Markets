@@ -202,3 +202,4 @@ Key optional settings:
 - `MAX_LEVERAGE`, `MAX_MARGIN_USAGE`, `MAX_DAILY_LOSS` — risk limit overrides
 
 The system has 77 automated tests covering index calculation, shock detection, divergence alerts, risk throttling, basis engine, funding arbitrage, stable flow, adaptive weights, portfolio optimization, liquidation heatmap, execution metrics, and Solana liquidity scoring.
+The system has 77 automated tests covering index calculation, shock detection, divergence alerts, risk throttling, basis engine, funding arbitrage, stable flow, adaptive weights, portfolio optimization, liquidation heatmap, execution metrics, and Solana liquidity scoring.
