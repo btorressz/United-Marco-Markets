@@ -210,7 +210,7 @@ const UI = (() => {
       if (weights.length === 0) {
         weightsEl.innerHTML = '<div class="empty-state"><div class="empty-state-text">No country weight data available</div></div>';
       } else {
-        const header = '<div class="guardrail-row" style="font-weight:600;border-bottom:1px solid var(--border)"><span class="guardrail-label">Country</span><span style="flex:1;text-align:right;font-size:12px">Tariff Rate</span><span style="flex:1;text-align:right;font-size:12px">Weight %</span></div>';
+        const header = '<div class="guardrail-row" style="font-weight:600;border-bottom:1px solid var(--border-color)"><span class="guardrail-label">Country</span><span style="flex:1;text-align:right;font-size:12px">Tariff Rate</span><span style="flex:1;text-align:right;font-size:12px">Weight %</span></div>';
         const rows = weights.map(w => {
           const barW = Math.min(w.weight_pct || 0, 100);
           return `<div class="guardrail-row"><span class="guardrail-label">${w.country || w.code}</span><span style="flex:1;text-align:right;font-size:13px">${formatNumber(w.tariff_rate, 2)}%</span><span style="flex:1;text-align:right;font-size:13px">${formatNumber(w.weight_pct, 1)}%</span></div><div style="height:3px;background:var(--bg-tertiary);border-radius:2px;margin-bottom:4px"><div style="height:3px;width:${barW}%;background:var(--accent-blue);border-radius:2px"></div></div>`;
@@ -569,6 +569,22 @@ const UI = (() => {
         `;
       }
     }
+
+    if (data.allocation) {
+      renderAllocationPanel(data.allocation);
+    }
+
+    if (data.mlPrediction) {
+      renderMLPanel(data.mlPrediction);
+    }
+
+    const btResult = document.getElementById('backtest-result-panel');
+    if (btResult && !data.backtestResult) {
+      renderBacktestPanel(null);
+    }
+    if (data.backtestResult) {
+      renderBacktestPanel(data.backtestResult);
+    }
   }
 
   function renderExecutionTab(data) {
@@ -717,7 +733,7 @@ const UI = (() => {
               const prob = row[String(drop)] || 0;
               const pct = (prob * 100).toFixed(0);
               const bg = prob >= 0.8 ? 'rgba(248,81,73,0.8)' : prob >= 0.5 ? 'rgba(248,81,73,0.5)' : prob >= 0.2 ? 'rgba(227,179,65,0.4)' : 'rgba(63,185,80,0.2)';
-              html += `<td style="padding:4px;text-align:center;background:${bg};border:1px solid var(--border)">${pct}%</td>`;
+              html += `<td style="padding:4px;text-align:center;background:${bg};border:1px solid var(--border-color)">${pct}%</td>`;
             });
             html += '</tr>';
           });
@@ -744,6 +760,14 @@ const UI = (() => {
           panel.innerHTML = html;
         }
       }
+    }
+
+    if (data.portfolioRisk !== undefined) {
+      renderPortfolioRiskPanel(data.portfolioRisk);
+    }
+
+    if (data.volRegime !== undefined || data.volRecommendations !== undefined) {
+      renderVolRegimePanel(data.volRegime, data.volRecommendations);
     }
   }
 
@@ -937,6 +961,281 @@ const UI = (() => {
     }
   }
 
+  function renderAllocationPanel(data) {
+    const panel = document.getElementById('capital-allocation-panel');
+    if (!panel) return;
+    if (!data) {
+      panel.innerHTML = '<div class="empty-state"><div class="empty-state-text">No allocation data</div></div>';
+      return;
+    }
+    const weights = data.weights || {};
+    const maxCap = data.max_capital_per_venue || {};
+    const rar = data.risk_adjusted_expected_returns || {};
+    const conf = data.confidence || 0;
+    const confCls = conf >= 0.7 ? 'green' : conf >= 0.5 ? 'yellow' : 'red';
+    const venueLabels = { hyperliquid: 'Hyperliquid', drift: 'Drift', jupiter_spot: 'Jupiter Spot', stablecoins: 'Stablecoins', cash: 'Cash' };
+    const venueColors = { hyperliquid: 'var(--accent-blue)', drift: 'var(--accent-green)', jupiter_spot: 'var(--accent-yellow)', stablecoins: 'var(--accent-purple)', cash: 'var(--text-muted)' };
+
+    let barsHtml = Object.entries(weights).map(([venue, w]) => {
+      const pct = (w * 100).toFixed(1);
+      const maxPct = ((maxCap[venue] || 1) * 100).toFixed(0);
+      const rarPct = ((rar[venue] || 0) * 100).toFixed(2);
+      const color = venueColors[venue] || 'var(--accent-blue)';
+      return `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+            <span style="font-weight:500">${venueLabels[venue] || venue}</span>
+            <span style="color:var(--text-muted)">${pct}% &nbsp;<span style="font-size:10px;opacity:0.6">max ${maxPct}% | RAR ${rarPct}%</span></span>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:4px;height:8px;overflow:hidden">
+            <div style="width:${Math.min(parseFloat(pct),100)}%;height:100%;background:${color};border-radius:4px;transition:width 0.4s"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const reasoning = (data.reasoning || []).map(r => `<div style="font-size:11px;color:var(--text-muted);padding:2px 0">• ${r}</div>`).join('');
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div><div style="font-size:11px;color:var(--text-muted)">Confidence</div><div class="metric-value ${confCls}" style="font-size:18px">${(conf*100).toFixed(0)}%</div></div>
+        <div style="font-size:11px;color:var(--text-muted);flex:1">Proposal only — no auto-trade</div>
+        <div style="font-size:11px;color:var(--text-muted)">${formatTimestamp(data.ts)}</div>
+      </div>
+      ${barsHtml}
+      <details style="margin-top:10px">
+        <summary style="font-size:11px;color:var(--text-muted);cursor:pointer">Reasoning</summary>
+        <div style="margin-top:6px">${reasoning}</div>
+      </details>
+    `;
+  }
+
+  function renderMLPanel(data) {
+    const panel = document.getElementById('ml-signal-panel');
+    if (!panel) return;
+    if (!data) {
+      panel.innerHTML = '<div class="empty-state"><div class="empty-state-text">No ML prediction data</div></div>';
+      return;
+    }
+    const pred = data.prediction || {};
+    const prob = pred.probability || 0;
+    const conf = pred.confidence || 0;
+    const modelType = pred.model_type || 'heuristic';
+    const probCls = prob >= 0.6 ? 'green' : prob <= 0.4 ? 'red' : 'yellow';
+    const confCls = conf >= 0.7 ? 'green' : conf >= 0.5 ? 'yellow' : 'red';
+    const drivers = data.top_drivers || [];
+
+    const driversHtml = drivers.slice(0, 5).map(d => {
+      const contrib = d.contribution || 0;
+      const dirCls = contrib > 0 ? 'green' : 'red';
+      const bar = Math.min(Math.abs(contrib) * 500, 100).toFixed(0);
+      return `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px">
+          <span style="width:120px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${d.description || d.feature}">${d.feature}</span>
+          <div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:6px;overflow:hidden">
+            <div style="width:${bar}%;height:100%;background:${contrib>0?'var(--accent-green)':'var(--accent-red)'};border-radius:3px"></div>
+          </div>
+          <span class="${dirCls}" style="width:50px;text-align:right">${contrib>0?'+':''}${(contrib*100).toFixed(2)}%</span>
+        </div>`;
+    }).join('');
+
+    panel.innerHTML = `
+      <div class="metric-row">
+        <div class="metric-box"><div class="metric-label">BTC Up Prob</div><div class="metric-value ${probCls}">${(prob*100).toFixed(1)}%</div></div>
+        <div class="metric-box"><div class="metric-label">Confidence</div><div class="metric-value ${confCls}">${(conf*100).toFixed(0)}%</div></div>
+        <div class="metric-box"><div class="metric-label">Model</div><div class="metric-value blue" style="font-size:11px">${modelType.replace(/_/g,' ')}</div></div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);margin-bottom:6px">Top Feature Drivers</div>
+      ${driversHtml || '<div class="empty-state-text" style="font-size:11px">No driver data</div>'}
+      <div style="margin-top:8px;font-size:10px;color:var(--text-muted)">${formatTimestamp(data.ts)}</div>
+    `;
+  }
+
+  function renderBacktestPanel(data) {
+    const panel = document.getElementById('backtest-result-panel');
+    if (!panel) return;
+    if (!data || data.available === false) {
+      panel.innerHTML = '<div class="empty-state"><div class="empty-state-text">Run a backtest to see results</div></div>';
+      return;
+    }
+    const retCls = (data.total_return_pct || 0) >= 0 ? 'green' : 'red';
+    const ddCls = 'red';
+    const sharpeCls = (data.sharpe_ratio || 0) >= 1 ? 'green' : (data.sharpe_ratio || 0) >= 0 ? 'yellow' : 'red';
+    const cfg = data.config || {};
+
+    const eqCurve = data.equity_curve || [];
+    let chartHtml = '';
+    if (eqCurve.length > 1) {
+      const min = Math.min(...eqCurve);
+      const max = Math.max(...eqCurve);
+      const range = max - min || 1;
+      const points = eqCurve.map((v, i) => {
+        const x = (i / (eqCurve.length - 1) * 100).toFixed(1);
+        const y = (100 - ((v - min) / range * 80 + 10)).toFixed(1);
+        return `${x},${y}`;
+      }).join(' ');
+      chartHtml = `
+        <div style="margin-top:12px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Equity Curve</div>
+          <svg width="100%" height="80" viewBox="0 0 100 100" preserveAspectRatio="none" style="border:1px solid var(--border-color);border-radius:4px;background:var(--bg-secondary)">
+            <polyline points="${points}" fill="none" stroke="var(--accent-blue)" stroke-width="0.8"/>
+          </svg>
+        </div>`;
+    }
+
+    const stratPnl = data.per_strategy_pnl || {};
+    const stratHtml = Object.entries(stratPnl).map(([s, v]) =>
+      `<span style="margin-right:12px;font-size:11px">${s}: <span class="${v>=0?'green':'red'}">${v>=0?'+':''}$${formatNumber(v,2)}</span></span>`
+    ).join('');
+
+    panel.innerHTML = `
+      <div class="metric-row" style="flex-wrap:wrap">
+        <div class="metric-box"><div class="metric-label">Total Return</div><div class="metric-value ${retCls}">${(data.total_return_pct||0)>=0?'+':''}${formatNumber(data.total_return_pct,2)}%</div></div>
+        <div class="metric-box"><div class="metric-label">Sharpe</div><div class="metric-value ${sharpeCls}">${formatNumber(data.sharpe_ratio,3)}</div></div>
+        <div class="metric-box"><div class="metric-label">Max DD</div><div class="metric-value ${ddCls}">${formatNumber(data.max_drawdown_pct,2)}%</div></div>
+        <div class="metric-box"><div class="metric-label">Win Rate</div><div class="metric-value">${formatNumber((data.win_rate||0)*100,1)}%</div></div>
+        <div class="metric-box"><div class="metric-label">Trades</div><div class="metric-value blue">${data.trade_count||0}</div></div>
+        <div class="metric-box"><div class="metric-label">Avg Slip</div><div class="metric-value">${formatNumber(data.avg_slippage_bps,1)} bps</div></div>
+        <div class="metric-box"><div class="metric-label">VaR 95%</div><div class="metric-value red">${formatNumber((data.var_95||0)*100,2)}%</div></div>
+        <div class="metric-box"><div class="metric-label">CVaR 95%</div><div class="metric-value red">${formatNumber((data.cvar_95||0)*100,2)}%</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">${cfg.strategy||'momentum'} | ${cfg.window_days||30}d | ${cfg.venue||'paper'} | fee ${cfg.fee_bps||10}bps</div>
+      ${stratHtml ? `<div style="margin-top:6px">${stratHtml}</div>` : ''}
+      ${chartHtml}
+      <div style="margin-top:6px;font-size:10px;color:var(--text-muted)">${formatTimestamp(data.ts)}</div>
+    `;
+  }
+
+  function renderVolRegimePanel(volRegime, volRecs) {
+    const panel = document.getElementById('vol-regime-panel');
+    if (!panel) return;
+
+    if (!volRegime) {
+      panel.innerHTML = '<div class="empty-state"><div class="empty-state-text">No volatility regime data</div></div>';
+      return;
+    }
+
+    const regime = volRegime.regime || 'normal_volatility';
+    const conf = volRegime.confidence || 0;
+    const regimeLabel = regime.replace(/_/g, ' ').toUpperCase();
+    const regimeCls = {
+      low_volatility: 'green', normal_volatility: 'blue',
+      high_volatility: 'yellow', shock_regime: 'red', liquidity_crunch: 'red'
+    }[regime] || 'blue';
+
+    const scores = volRegime.scores || {};
+    const scoresHtml = Object.entries(scores).sort((a,b) => b[1]-a[1]).map(([r, s]) => {
+      const bar = Math.min(s * 200, 100).toFixed(0);
+      return `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px">
+          <span style="width:130px;color:var(--text-secondary)">${r.replace(/_/g,' ')}</span>
+          <div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:5px">
+            <div style="width:${bar}%;height:100%;background:var(--accent-blue);border-radius:3px"></div>
+          </div>
+          <span style="width:40px;text-align:right;color:var(--text-muted)">${(s*100).toFixed(0)}%</span>
+        </div>`;
+    }).join('');
+
+    let recHtml = '';
+    if (volRecs) {
+      const summary = volRecs.summary || '';
+      const levAdj = volRecs.leverage_adjustment || '--';
+      const slippage = volRecs.slippage_tolerance || '--';
+      const hedgeAgg = volRecs.hedge_aggressiveness || '--';
+      const execStyle = volRecs.execution_style || '--';
+      recHtml = `
+        <div style="margin-top:10px;padding:8px;background:var(--bg-secondary);border-radius:4px;font-size:11px">
+          <div style="font-weight:600;margin-bottom:6px;color:var(--text-primary)">${summary}</div>
+          <div class="metric-row" style="flex-wrap:wrap">
+            <div class="metric-box" style="flex:1;min-width:100px"><div class="metric-label">Leverage</div><div class="metric-value" style="font-size:12px">${levAdj.replace(/_/g,' ')}</div></div>
+            <div class="metric-box" style="flex:1;min-width:100px"><div class="metric-label">Slippage Tol</div><div class="metric-value" style="font-size:12px">${slippage.replace(/_/g,' ')}</div></div>
+            <div class="metric-box" style="flex:1;min-width:100px"><div class="metric-label">Hedge Agg</div><div class="metric-value" style="font-size:12px">${hedgeAgg}</div></div>
+          </div>
+          <div style="margin-top:4px;color:var(--text-muted)">Exec style: ${execStyle.replace(/_/g,' ')}</div>
+        </div>`;
+    }
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted)">Current Regime</div>
+          <div class="metric-value ${regimeCls}" style="font-size:20px">${regimeLabel}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted)">Confidence</div>
+          <div class="metric-value" style="font-size:16px">${(conf*100).toFixed(0)}%</div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${formatTimestamp(volRegime.ts)}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Regime Scores</div>
+      ${scoresHtml}
+      ${recHtml}
+    `;
+  }
+
+  function renderPortfolioRiskPanel(data) {
+    const panel = document.getElementById('portfolio-risk-panel');
+    if (!panel) return;
+    if (!data) {
+      panel.innerHTML = '<div class="empty-state"><div class="empty-state-text">No portfolio risk data</div></div>';
+      return;
+    }
+
+    const warnings = (data.warnings || []).filter(w => !w.includes('No open positions'));
+    const warningsHtml = warnings.map(w =>
+      `<div style="font-size:11px;color:var(--accent-yellow);padding:2px 0">⚠ ${w}</div>`
+    ).join('');
+
+    const venueExp = data.venue_exposure || {};
+    const totalExp = data.total_exposure || 0;
+    const venueHtml = Object.entries(venueExp).map(([venue, exp]) => {
+      const pct = totalExp > 0 ? ((exp / totalExp) * 100).toFixed(1) : '0';
+      return `<tr><td style="padding:4px 8px">${venue}</td><td style="padding:4px 8px;text-align:right">$${formatNumber(exp,2)}</td><td style="padding:4px 8px;text-align:right">${pct}%</td></tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+      <div class="metric-row" style="flex-wrap:wrap">
+        <div class="metric-box"><div class="metric-label">Total Exposure</div><div class="metric-value">$${formatNumber(data.total_exposure,2)}</div></div>
+        <div class="metric-box"><div class="metric-label">Long</div><div class="metric-value green">$${formatNumber(data.long_exposure,2)}</div></div>
+        <div class="metric-box"><div class="metric-label">Short</div><div class="metric-value red">$${formatNumber(data.short_exposure,2)}</div></div>
+        <div class="metric-box"><div class="metric-label">Net</div><div class="metric-value ${classForValue(data.net_exposure)}">$${formatNumber(data.net_exposure,2)}</div></div>
+        <div class="metric-box"><div class="metric-label">VaR 95%</div><div class="metric-value red">$${formatNumber(data.var_95,2)}</div></div>
+        <div class="metric-box"><div class="metric-label">CVaR 95%</div><div class="metric-value red">$${formatNumber(data.cvar_95,2)}</div></div>
+        <div class="metric-box"><div class="metric-label">Conc Risk</div><div class="metric-value ${(data.concentration_risk_venue||0)>0.6?'red':(data.concentration_risk_venue||0)>0.4?'yellow':'green'}">${formatNumber((data.concentration_risk_venue||0)*100,1)}%</div></div>
+        <div class="metric-box"><div class="metric-label">Total P&amp;L</div><div class="metric-value ${classForValue(data.total_pnl)}">$${formatNumber(data.total_pnl,2)}</div></div>
+      </div>
+      ${warningsHtml}
+      ${venueHtml ? `
+        <div style="margin-top:10px;font-size:11px;color:var(--text-muted);margin-bottom:4px">Venue Exposure</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border-color)"><th style="padding:4px 8px;text-align:left">Venue</th><th style="padding:4px 8px;text-align:right">Notional</th><th style="padding:4px 8px;text-align:right">Share</th></tr></thead>
+          <tbody>${venueHtml}</tbody>
+        </table>` : ''}
+      <div style="margin-top:6px;font-size:10px;color:var(--text-muted)">${formatTimestamp(data.ts)}</div>
+    `;
+  }
+
+  function renderRedisHealth(data) {
+    const panel = document.getElementById('redis-health-panel');
+    if (!panel) return;
+    if (!data) {
+      panel.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Redis status unavailable</div>';
+      return;
+    }
+    const statusCls = data.connected ? 'badge-green' : 'badge-red';
+    const statusLabel = data.connected ? 'CONNECTED' : 'OFFLINE';
+    const fallbackLabel = data.fallback_mode ? '<span class="badge badge-yellow" style="font-size:10px">FALLBACK</span>' : '';
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="badge ${statusCls}">${statusLabel}</span>
+        ${fallbackLabel}
+        ${data.ping_latency_ms !== null && data.ping_latency_ms !== undefined ? `<span style="font-size:11px;color:var(--text-muted)">Ping: ${data.ping_latency_ms}ms</span>` : ''}
+        ${data.memory_used_mb !== null && data.memory_used_mb !== undefined ? `<span style="font-size:11px;color:var(--text-muted)">Mem: ${data.memory_used_mb}MB</span>` : ''}
+        ${data.key_count_estimate !== null && data.key_count_estimate !== undefined ? `<span style="font-size:11px;color:var(--text-muted)">Keys: ${data.key_count_estimate}</span>` : ''}
+        ${data.last_error ? `<span style="font-size:10px;color:var(--accent-red)">${data.last_error.substring(0,60)}</span>` : ''}
+      </div>
+    `;
+  }
+
   return {
     formatTimestamp,
     formatNumber,
@@ -953,6 +1252,12 @@ const UI = (() => {
     renderMCResult,
     renderAgentsTab,
     renderFeedStatus,
+    renderAllocationPanel,
+    renderMLPanel,
+    renderBacktestPanel,
+    renderVolRegimePanel,
+    renderPortfolioRiskPanel,
+    renderRedisHealth,
     addEventToTimeline,
     renderTimeline,
     updateConnectionStatus,
