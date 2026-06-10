@@ -171,6 +171,18 @@ const Charts = (() => {
     });
   }
 
+
+
+  function createEquityChart(canvasId) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    return new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Close', data: [], borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.10)', fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2 }] },
+      options: mergeOptions({ plugins: { legend: { display: true, labels: { color: tickColor } } }, scales: { y: { title: { display: true, text: 'Price', color: tickColor } } } }),
+    });
+  }
+
   function updateChart(chart, newData) {
     if (!chart) return;
     if (newData.labels) chart.data.labels = newData.labels;
@@ -198,7 +210,7 @@ const Charts = (() => {
 
   function reThemeAllCharts() {
     const c = getThemeColors();
-    const allCharts = [window._indexChart, window._fundingChart, window._divergenceChart, window._mcChart].filter(Boolean);
+    const allCharts = [window._indexChart, window._fundingChart, window._divergenceChart, window._mcChart, window._equityChart].filter(Boolean);
     allCharts.forEach(chart => {
       if (chart.options.plugins.tooltip) {
         chart.options.plugins.tooltip.backgroundColor = c.tooltipBg;
@@ -224,6 +236,7 @@ const Charts = (() => {
     createFundingChart,
     createDivergenceChart,
     createMCChart,
+    createEquityChart,
     updateChart,
     reThemeAllCharts,
   };

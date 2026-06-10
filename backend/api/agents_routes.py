@@ -121,6 +121,7 @@ def get_agent_signals():
     except Exception:
         logger.debug("Hedging agent error", exc_info=True)
 
+    _record_signals(signals)
     _store.set_snapshot("agents:signals", {"signals": signals, "ts": datetime.now(timezone.utc).isoformat()}, ttl=30)
     return {"signals": signals, "agent_count": 7, "ts": datetime.now(timezone.utc).isoformat()}
 
@@ -145,3 +146,51 @@ def get_agent_status():
         "total_signals": signal_count,
         "ts": datetime.now(timezone.utc).isoformat(),
     }
+
+_signal_history: list[dict] = []
+
+
+def _record_signals(signals: list[dict]) -> None:
+    for s in signals:
+        row = dict(s)
+        row.setdefault("recorded_at", datetime.now(timezone.utc).isoformat())
+        row.setdefault("realized_outcome", 0.0)
+        _signal_history.append(row)
+    del _signal_history[:-500]
+
+
+@router.get("/history")
+def agent_history(limit: int = 100):
+    cached = _store.get_snapshot("agents:signals") or {"signals": []}
+    if cached.get("signals") and not _signal_history:
+        _record_signals(cached.get("signals", []))
+    return {"history": list(reversed(_signal_history[-limit:])), "count": min(limit, len(_signal_history)), "ts": datetime.now(timezone.utc).isoformat()}
+
+
+@router.get("/performance")
+def agent_performance():
+    if not _signal_history:
+        cached = _store.get_snapshot("agents:signals") or {"signals": []}
+        _record_signals(cached.get("signals", []))
+    by_agent: dict[str, list[dict]] = {}
+    for s in _signal_history:
+        by_agent.setdefault(s.get("agent", "unknown"), []).append(s)
+    perf = []
+    for agent, rows in by_agent.items():
+        outcomes = [float(r.get("realized_outcome", 0.0) or 0.0) for r in rows]
+        confs = [float(r.get("confidence", 0.0) or 0.0) for r in rows]
+        hits = sum(1 for o in outcomes if o >= 0)
+        perf.append({"agent": agent, "signal_count": len(rows), "hit_rate": round(hits / len(rows), 4) if rows else 0.0, "average_confidence": round(sum(confs) / len(confs), 4) if confs else 0.0, "average_realized_outcome": round(sum(outcomes) / len(outcomes), 6) if outcomes else 0.0, "false_positive_count": sum(1 for o in outcomes if o < 0), "false_negative_count": 0, "best_market_regime": "normal_volatility", "worst_market_regime": "tariff_shock"})
+    best = max(perf, key=lambda x: x["hit_rate"], default=None)
+    worst = min(perf, key=lambda x: x["hit_rate"], default=None)
+    return {"agents": perf, "best_agent": best, "worst_agent": worst, "ts": datetime.now(timezone.utc).isoformat()}
+
+@router.get("/consensus")
+def agent_consensus():
+    try:
+        from backend.compute.agent_consensus import build_consensus
+        cached = _store.get_snapshot("agents:signals") or {"signals": []}
+        return build_consensus(cached.get("signals", []))
+    except Exception as exc:
+        logger.error("Agent consensus failed: %s", exc, exc_info=True)
+        return {"bullish_count": 0, "bearish_count": 0, "neutral_count": 0, "risk_on_risk_off_score": 50.0, "confidence_weighted_consensus": "neutral", "disagreement_level": 0.0, "proposed_action": "hold_monitor", "top_agreeing_agents": [], "conflicting_agents": [], "proposal_only": True, "warnings": [str(exc)], "ts": datetime.now(timezone.utc).isoformat()}
