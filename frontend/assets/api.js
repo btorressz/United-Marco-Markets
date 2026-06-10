@@ -103,5 +103,26 @@ const API = (() => {
     getRegimeAnalogs: () => fetchJSON('/api/risk/regime-analogs'),
     getMacroTerminal: () => fetchJSON('/api/index/macro-terminal'),
     getFeedStatus: () => fetchJSON('/api/health/feeds'),
+
+    getAllocationLatest: () => fetchJSON('/api/allocation/latest'),
+    postRebalancePreview: (body) => postJSON('/api/allocation/rebalance-preview', body),
+
+    getMLFeaturesLatest: () => fetchJSON('/api/ml/features/latest'),
+    getMLPredictionLatest: () => fetchJSON('/api/ml/prediction/latest'),
+    postMLTrainOffline: (body) => postJSON('/api/ml/train/offline', body),
+    getMLTrainingHistory: () => fetchJSON('/api/ml/training/history'),
+
+    postBacktestRun: (config) => postJSON('/api/backtest/run', config),
+    getBacktestLatest: () => fetchJSON('/api/backtest/latest'),
+    getBacktestHistory: () => fetchJSON('/api/backtest/history'),
+
+    getVolRegime: () => fetchJSON('/api/volatility/regime'),
+    getVolRecommendations: () => fetchJSON('/api/volatility/recommendations'),
+
+    getPortfolioRiskSummary: () => fetchJSON('/api/portfolio-risk/summary'),
+    getPortfolioRiskContributions: () => fetchJSON('/api/portfolio-risk/contributions'),
+    getPortfolioRiskExposures: () => fetchJSON('/api/portfolio-risk/exposures'),
+
+    getRedisHealth: () => fetchJSON('/api/health/redis'),
   };
 })();
