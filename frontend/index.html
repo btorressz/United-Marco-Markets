@@ -328,6 +328,60 @@
         <div class="card" id="portfolio-proposal-panel">
           <div class="empty-state"><div class="empty-state-text">Loading portfolio proposal...</div></div>
         </div>
+
+        <div class="section-title">Capital Allocation</div>
+        <div class="card" id="capital-allocation-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading capital allocation...</div></div>
+        </div>
+
+        <div class="section-title">ML Signal Layer</div>
+        <div class="card" id="ml-signal-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading ML prediction...</div></div>
+        </div>
+
+        <div class="section-title">Historical Backtest</div>
+        <div class="card">
+          <form id="backtest-form" class="inline-form">
+            <div class="form-group">
+              <label class="form-label">Strategy</label>
+              <select name="strategy" class="form-select">
+                <option value="momentum">Momentum</option>
+                <option value="carry_arb">Carry Arb</option>
+                <option value="buy_hold">Buy &amp; Hold</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Window (days)</label>
+              <input name="window_days" class="form-input" type="number" value="30" min="1" max="365" style="width:70px">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Capital ($)</label>
+              <input name="initial_capital" class="form-input" type="number" value="10000" min="100" style="width:90px">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Venue</label>
+              <select name="venue" class="form-select">
+                <option value="hyperliquid">Hyperliquid</option>
+                <option value="drift">Drift</option>
+                <option value="paper">Paper</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fee (bps)</label>
+              <input name="fee_bps" class="form-input" type="number" value="10" min="0" style="width:60px">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Slippage (bps)</label>
+              <input name="slippage_bps" class="form-input" type="number" value="5" min="0" style="width:70px">
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary">Run Backtest</button>
+            </div>
+          </form>
+          <div id="backtest-result-panel" style="margin-top:12px">
+            <div class="empty-state"><div class="empty-state-text">Submit form to run a backtest</div></div>
+          </div>
+        </div>
       </div>
 
       <!-- EXECUTION TAB -->
@@ -409,6 +463,16 @@
       <div id="tab-risk" class="tab-panel">
         <div id="throttle-banner" class="throttle-banner inactive">
           <span>✓</span> <strong>THROTTLE OFF</strong> — Trading enabled
+        </div>
+
+        <div class="section-title">Portfolio Risk Dashboard</div>
+        <div class="card" id="portfolio-risk-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading portfolio risk...</div></div>
+        </div>
+
+        <div class="section-title">Volatility Regime</div>
+        <div class="card" id="vol-regime-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading volatility regime...</div></div>
         </div>
 
         <div class="metric-row">
