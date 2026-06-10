@@ -77,6 +77,5 @@ class ExecutionAgent:
                 "ts": now,
             })
 
-        return signals
 
         return signals
