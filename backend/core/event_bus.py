@@ -74,6 +74,38 @@ class EventType:
     STABLECOIN_PLAYBOOK_TRIGGERED = "STABLECOIN_PLAYBOOK_TRIGGERED"
     TRADE_BLOCKED_STALE_DATA = "TRADE_BLOCKED_STALE_DATA"
     TRADE_DEGRADED_DATA = "TRADE_DEGRADED_DATA"
+    CAPITAL_ALLOCATION_UPDATE = "CAPITAL_ALLOCATION_UPDATE"
+    REBALANCE_PREVIEW_CREATED = "REBALANCE_PREVIEW_CREATED"
+    ML_FEATURES_UPDATED = "ML_FEATURES_UPDATED"
+    ML_MODEL_TRAINED = "ML_MODEL_TRAINED"
+    ML_INFERENCE_UPDATE = "ML_INFERENCE_UPDATE"
+    BACKTEST_STARTED = "BACKTEST_STARTED"
+    BACKTEST_COMPLETED = "BACKTEST_COMPLETED"
+    VOL_REGIME_CHANGED = "VOL_REGIME_CHANGED"
+    PORTFOLIO_RISK_UPDATE = "PORTFOLIO_RISK_UPDATE"
+    REDIS_DEGRADED = "REDIS_DEGRADED"
+    REDIS_RECOVERED = "REDIS_RECOVERED"
+    # Phase 7 — Execution + Risk Intelligence
+    ALLOCATION_SIZE_ADJUSTED = "ALLOCATION_SIZE_ADJUSTED"
+    ALLOCATION_LIMIT_BREACH = "ALLOCATION_LIMIT_BREACH"
+    STOP_LOSS_TRIGGERED = "STOP_LOSS_TRIGGERED"
+    TAKE_PROFIT_TRIGGERED = "TAKE_PROFIT_TRIGGERED"
+    TRAILING_STOP_UPDATED = "TRAILING_STOP_UPDATED"
+    BRACKET_ORDER_CREATED = "BRACKET_ORDER_CREATED"
+    ADVANCED_ORDER_REJECTED = "ADVANCED_ORDER_REJECTED"
+    REDUCE_ONLY_REJECTED = "REDUCE_ONLY_REJECTED"
+    TWAP_STARTED = "TWAP_STARTED"
+    TWAP_SLICE_FILLED = "TWAP_SLICE_FILLED"
+    VWAP_STARTED = "VWAP_STARTED"
+    VWAP_SLICE_FILLED = "VWAP_SLICE_FILLED"
+    SMART_EXECUTION_COMPLETED = "SMART_EXECUTION_COMPLETED"
+    SMART_EXECUTION_ABORTED = "SMART_EXECUTION_ABORTED"
+    STRATEGY_PERFORMANCE_UPDATE = "STRATEGY_PERFORMANCE_UPDATE"
+    FEED_STALE = "FEED_STALE"
+    FEED_ERROR = "FEED_ERROR"
+    FEED_RECOVERED = "FEED_RECOVERED"
+    PRICE_AUTHORITY_CHANGED = "PRICE_AUTHORITY_CHANGED"
+    TRADE_DEBUG_REPLAY_RUN = "TRADE_DEBUG_REPLAY_RUN"
 
     ALL = [
         INDEX_UPDATE, SHOCK_SPIKE, DIVERGENCE_ALERT, FUNDING_REGIME_FLIP,
@@ -101,6 +133,22 @@ class EventType:
         SLIPPAGE_MODEL_UPDATE, SAFE_SIZE_WARNING,
         HEDGE_RATIO_UPDATE, STABLECOIN_PLAYBOOK_TRIGGERED,
         TRADE_BLOCKED_STALE_DATA, TRADE_DEGRADED_DATA,
+        CAPITAL_ALLOCATION_UPDATE, REBALANCE_PREVIEW_CREATED,
+        ML_FEATURES_UPDATED, ML_MODEL_TRAINED, ML_INFERENCE_UPDATE,
+        BACKTEST_STARTED, BACKTEST_COMPLETED,
+        VOL_REGIME_CHANGED, PORTFOLIO_RISK_UPDATE,
+        REDIS_DEGRADED, REDIS_RECOVERED,
+        # Phase 7
+        ALLOCATION_SIZE_ADJUSTED, ALLOCATION_LIMIT_BREACH,
+        STOP_LOSS_TRIGGERED, TAKE_PROFIT_TRIGGERED,
+        TRAILING_STOP_UPDATED, BRACKET_ORDER_CREATED,
+        ADVANCED_ORDER_REJECTED, REDUCE_ONLY_REJECTED,
+        TWAP_STARTED, TWAP_SLICE_FILLED,
+        VWAP_STARTED, VWAP_SLICE_FILLED,
+        SMART_EXECUTION_COMPLETED, SMART_EXECUTION_ABORTED,
+        STRATEGY_PERFORMANCE_UPDATE,
+        FEED_STALE, FEED_ERROR, FEED_RECOVERED, PRICE_AUTHORITY_CHANGED,
+        TRADE_DEBUG_REPLAY_RUN,
     ]
 
 
@@ -232,6 +280,39 @@ class EventBus:
                 return results
         except Exception:
             logger.warning("Failed to fetch recent events", exc_info=True)
+            return []
+        finally:
+            conn.close()
+
+    def get_events_around(self, ts_iso: str, window_seconds: int = 120, limit: int = 50) -> list[dict[str, Any]]:
+        self._ensure_table()
+        conn = self._get_pg_conn()
+        if conn is None:
+            return []
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    """SELECT id, event_type, source, payload, ts FROM events
+                       WHERE ts BETWEEN (%s::timestamptz - interval '%s seconds')
+                                    AND (%s::timestamptz + interval '%s seconds')
+                       ORDER BY ts ASC LIMIT %s""",
+                    (ts_iso, window_seconds, ts_iso, window_seconds, limit),
+                )
+                rows = cur.fetchall()
+                results = []
+                for row in rows:
+                    entry = dict(row)
+                    if isinstance(entry.get("ts"), datetime):
+                        entry["ts"] = entry["ts"].isoformat()
+                    if isinstance(entry.get("payload"), str):
+                        try:
+                            entry["payload"] = json.loads(entry["payload"])
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                    results.append(entry)
+                return results
+        except Exception:
+            logger.warning("Failed to fetch events around timestamp", exc_info=True)
             return []
         finally:
             conn.close()
