@@ -30,6 +30,7 @@
       <button class="tab-btn" data-tab="stablecoins">Stablecoins</button>
       <button class="tab-btn" data-tab="strategy">Strategy</button>
       <button class="tab-btn" data-tab="execution">Execution</button>
+      <button class="tab-btn" data-tab="equities">Equities</button>
       <button class="tab-btn" data-tab="risk">Risk</button>
       <button class="tab-btn" data-tab="agents">Agents</button>
     </nav>
@@ -98,6 +99,9 @@
             </div>
           </div>
         </div>
+
+        <div class="section-title" style="margin-top:16px">Macro Event Calendar &amp; Market Impact</div>
+        <div class="card" id="macro-events-panel"><div class="empty-state"><div class="empty-state-text">Loading macro event timeline...</div></div></div>
 
         <div class="section-title" style="margin-top:16px">Macro Terminal</div>
         <div id="macro-terminal-freshness" style="margin-bottom:8px;font-size:12px;color:var(--text-muted)"></div>
@@ -339,6 +343,21 @@
           <div class="empty-state"><div class="empty-state-text">Loading ML prediction...</div></div>
         </div>
 
+        <div class="section-title">Strategy Performance</div>
+        <div class="card" id="strategy-performance-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading strategy performance...</div></div>
+        </div>
+
+        <div class="section-title">Replay Trade Simulation</div>
+        <div class="card">
+          <form id="replay-sim-form" class="inline-form">
+            <div class="form-group"><label class="form-label">Scenario</label><select name="scenario" class="form-select"><option value="tariff_shock">Tariff Shock</option><option value="risk_off">Risk Off</option></select></div>
+            <div class="form-group"><label class="form-label">Capital</label><input name="initial_capital" class="form-input" type="number" value="100000"></div>
+            <div class="form-group"><button type="submit" class="btn btn-primary">Run Simulation</button></div>
+          </form>
+          <div id="replay-sim-panel" style="margin-top:12px"><div class="empty-state"><div class="empty-state-text">Submit form to simulate proposal-only trade decisions</div></div></div>
+        </div>
+
         <div class="section-title">Historical Backtest</div>
         <div class="card">
           <form id="backtest-form" class="inline-form">
@@ -429,6 +448,17 @@
 
         <div class="grid-2" style="margin-top:16px">
           <div>
+            <div class="section-title">Allocation Execution Preview</div>
+            <div class="card" id="allocation-preview-panel"><div class="empty-state"><div class="empty-state-text">Preview loads from the order form without routing trades</div></div></div>
+          </div>
+          <div>
+            <div class="section-title">Conditional / Smart Orders</div>
+            <div class="card" id="advanced-orders-panel"><div class="empty-state"><div class="empty-state-text">Loading advanced paper order controls...</div></div></div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div>
             <div class="section-title">Open Positions</div>
             <div class="table-scroll">
               <table>
@@ -459,11 +489,60 @@
         </div>
       </div>
 
+
+      <!-- EQUITIES TAB -->
+      <div id="tab-equities" class="tab-panel">
+        <div class="section-title">Equity Market Overview</div>
+        <div class="metric-row" id="equity-overview-cards"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Selected Ticker Chart</span><span id="equity-provider-badge" class="freshness-badge nodata"><span class="freshness-dot"></span> LOADING</span></div>
+            <select id="equity-ticker-select" class="form-select" style="max-width:140px;margin-bottom:8px"><option>SPY</option><option>QQQ</option><option>AAPL</option><option>TSLA</option><option>NVDA</option><option>CAT</option></select>
+            <div class="chart-container"><canvas id="equity-chart"></canvas></div>
+          </div>
+          <div class="card" id="equity-cross-asset-panel"><div class="empty-state"><div class="empty-state-text">Loading cross-asset risk...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card"><div class="card-header"><span class="card-title">Sector ETF Heatmap</span></div><div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Sector</th><th>5D</th><th>Vol</th><th>RS vs SPY</th></tr></thead><tbody id="equity-sector-tbody"></tbody></table></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">Tariff-Sensitive Watchlist</span></div><div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Sector</th><th>Price</th><th>1M</th><th>Vol/Avg</th></tr></thead><tbody id="equity-watchlist-tbody"></tbody></table></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="equity-tariff-panel"><div class="empty-state"><div class="empty-state-text">Loading tariff exposure...</div></div></div>
+          <div class="card" id="equity-agent-panel"><div class="empty-state"><div class="empty-state-text">Loading equity agent signals...</div></div></div>
+        </div>
+        <div class="section-title">Data Quality</div>
+        <div class="card" id="data-quality-panel"><div class="empty-state"><div class="empty-state-text">Loading data quality...</div></div></div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="macro-sensitivity-panel"><div class="empty-state"><div class="empty-state-text">Loading tariff beta / macro sensitivity...</div></div></div>
+          <div class="card" id="cross-asset-correlation-panel"><div class="empty-state"><div class="empty-state-text">Loading cross-asset correlations...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="watchlist-builder-panel"><div class="empty-state"><div class="empty-state-text">Loading watchlists...</div></div></div>
+          <div class="card" id="institutional-reports-panel"><div class="empty-state"><div class="empty-state-text">Loading reports...</div></div></div>
+        </div>
+      </div>
+
       <!-- RISK TAB -->
       <div id="tab-risk" class="tab-panel">
         <div id="throttle-banner" class="throttle-banner inactive">
           <span>✓</span> <strong>THROTTLE OFF</strong> — Trading enabled
         </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="scenario-builder-panel">
+            <div class="card-header"><span class="card-title">Scenario Builder</span></div>
+            <form id="scenario-form" class="inline-form">
+              <div class="form-group"><label class="form-label">Tariff Δ</label><input name="tariff_index_change" class="form-input" type="number" value="20" style="width:70px"></div>
+              <div class="form-group"><label class="form-label">GDELT Δ</label><input name="gdelt_shock_change" class="form-input" type="number" step="0.1" value="1.0" style="width:70px"></div>
+              <div class="form-group"><label class="form-label">Equity DD</label><input name="equity_drawdown" class="form-input" type="number" step="0.01" value="-0.04" style="width:80px"></div>
+              <div class="form-group"><label class="form-label">Crypto DD</label><input name="crypto_drawdown" class="form-input" type="number" step="0.01" value="-0.03" style="width:80px"></div>
+              <div class="form-group"><button type="submit" class="btn btn-primary">Run Scenario</button></div>
+            </form>
+            <div id="scenario-result-panel" style="margin-top:10px"><div class="empty-state-text">Run a proposal-only scenario.</div></div>
+          </div>
+          <div class="card" id="cross-asset-hedge-panel"><div class="empty-state"><div class="empty-state-text">Loading hedge recommendations...</div></div></div>
+        </div>
+        <div class="card" id="portfolio-explain-panel" style="margin-top:16px"><div class="empty-state"><div class="empty-state-text">Loading portfolio explainability...</div></div></div>
 
         <div class="section-title">Portfolio Risk Dashboard</div>
         <div class="card" id="portfolio-risk-panel">
@@ -591,6 +670,16 @@
 
         <div class="section-title">Agent Registry</div>
         <div id="agent-registry"></div>
+
+        <div class="section-title">Agent Consensus</div>
+        <div class="card" id="agent-consensus-panel"><div class="empty-state"><div class="empty-state-text">Loading agent consensus...</div></div></div>
+        <div class="section-title">Signal Outcome Attribution</div>
+        <div class="card" id="signal-attribution-panel"><div class="empty-state"><div class="empty-state-text">Loading signal attribution...</div></div></div>
+
+        <div class="section-title">Agent Memory / Performance</div>
+        <div class="card" id="agent-performance-panel"><div class="empty-state"><div class="empty-state-text">Loading agent performance...</div></div></div>
+        <div class="section-title">Signal History</div>
+        <div class="card" id="agent-history-panel"><div class="empty-state"><div class="empty-state-text">Loading signal history...</div></div></div>
       </div>
 
     </div>

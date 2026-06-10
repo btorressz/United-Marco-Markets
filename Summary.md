@@ -203,3 +203,23 @@ Key optional settings:
 
 The system has 77 automated tests covering index calculation, shock detection, divergence alerts, risk throttling, basis engine, funding arbitrage, stable flow, adaptive weights, portfolio optimization, liquidation heatmap, execution metrics, and Solana liquidity scoring.
 The system has 77 automated tests covering index calculation, shock detection, divergence alerts, risk throttling, basis engine, funding arbitrage, stable flow, adaptive weights, portfolio optimization, liquidation heatmap, execution metrics, and Solana liquidity scoring.
+
+## Equity + Trading Desk Safety Phase
+
+The desk now includes a stock-market view focused on tariff-sensitive equities. It can show broad ETFs like SPY and QQQ, sector ETFs, and individual companies that may react to tariffs, supply-chain pressure, China exposure, commodity moves, or macro shocks. The equity data layer is deliberately fail-open: it tries yfinance first, can use Stooq for daily history, and always falls back to deterministic demo data so the app continues to work without API keys or external connectivity.
+
+The system also adds safer paper-mode execution planning. Allocator output can now be translated into a pre-trade sizing preview that checks proposed order size against target allocation, current allocation, venue caps, asset caps, portfolio risk, available cash, and current exposure. It returns allowed size, suggested size, warnings, and reasoning, but never auto-trades.
+
+Paper-mode advanced orders now include stop-loss, take-profit, trailing-stop, and bracket-order records. Smart execution can generate TWAP/VWAP slice schedules with estimated slippage and progress tracking. These are proposal/paper-mode features and do not change live trading behavior.
+
+Strategy performance, data quality, replay-to-trade simulation, and agent memory are now visible through new API endpoints and frontend panels. Agent behavior remains deterministic and explainable.
+
+## Institutional Intelligence Layer
+
+The desk now includes an institutional-style intelligence layer that connects macro/trade events to cross-asset market reactions. It builds a timeline of tariff, sanctions, trade-war, WITS, and GDELT events; estimates how SPY, QQQ, IWM, tariff-sensitive equities, crypto, stablecoins, funding, and basis may react; and shows this in new frontend panels.
+
+It also adds tariff beta and macro sensitivity scoring, cross-asset correlations, contagion detection, scenario simulation, cross-asset hedge recommendations, portfolio explainability, agent consensus, signal outcome attribution, custom watchlists, and structured risk reports. Everything remains proposal-only and fail-open: missing feeds produce safe degraded JSON rather than crashes.
+
+## Institutional Intelligence Audit
+
+The institutional layer was audited for router registration, endpoint availability, frontend wiring, render safety, and fail-open behavior. Tests now cover duplicate route prevention, endpoint response shapes, missing provider/storage cases, and empty datasets. The full test suite passes in the repository virtual environment.

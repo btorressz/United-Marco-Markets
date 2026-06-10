@@ -89,3 +89,33 @@ CREATE TABLE IF NOT EXISTS stablecoin_ticks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_stablecoin_ticks_ts ON stablecoin_ticks (ts DESC);
+
+CREATE TABLE IF NOT EXISTS conditional_orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venue VARCHAR(50) NOT NULL DEFAULT 'paper',
+    market VARCHAR(50) NOT NULL,
+    side VARCHAR(10) NOT NULL,
+    size FLOAT NOT NULL,
+    order_type VARCHAR(30) NOT NULL,
+    trigger_price FLOAT,
+    limit_price FLOAT,
+    trailing_amount FLOAT,
+    parent_id UUID,
+    status VARCHAR(30) NOT NULL DEFAULT 'active',
+    payload JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_conditional_orders_status ON conditional_orders (status);
+
+CREATE TABLE IF NOT EXISTS agent_signal_history (
+    id SERIAL PRIMARY KEY,
+    agent VARCHAR(100) NOT NULL,
+    ticker VARCHAR(50),
+    signal VARCHAR(100) NOT NULL,
+    confidence FLOAT NOT NULL DEFAULT 0.0,
+    realized_outcome FLOAT DEFAULT 0.0,
+    payload JSONB DEFAULT '{}',
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_agent_signal_history_ts ON agent_signal_history (ts DESC);

@@ -190,3 +190,34 @@ def redis_health():
         result["fallback_mode"] = True
 
     return result
+
+@router.get("/data-quality")
+def data_quality_dashboard():
+    now = datetime.now(timezone.utc)
+    feeds = [_get_feed_status(fd, now) for fd in _FEED_DEFINITIONS + [
+        {"name": "yfinance", "key": "equity:yfinance:latest", "is_authoritative": False, "interval_seconds": 900},
+        {"name": "Stooq", "key": "equity:stooq:latest", "is_authoritative": False, "interval_seconds": 86400},
+        {"name": "mock/demo equity fallback", "key": "equity:demo:latest", "is_authoritative": False, "interval_seconds": 31536000},
+    ]]
+    enriched = []
+    priorities = {"Pyth": 1, "Kraken": 2, "CoinGecko": 3, "yfinance": 1, "Stooq": 2, "mock/demo equity fallback": 3}
+    fallback = {"Pyth": "Kraken", "Kraken": "CoinGecko", "CoinGecko": "demo", "yfinance": "Stooq", "Stooq": "mock/demo equity fallback"}
+    for f in feeds:
+        status = f.get("status")
+        age = f.get("age_seconds")
+        stale = status in ("warning", "error")
+        confidence = 0.95 if status == "ok" else 0.65 if status == "warning" else 0.35 if status == "fallback" else 0.20
+        enriched.append({
+            **f,
+            "authoritative_source": f.get("is_authoritative", False),
+            "source_priority": priorities.get(f["name"], 5),
+            "source_age_seconds": age,
+            "staleness": "fresh" if status == "ok" else "stale" if stale else "degraded",
+            "error_rate": 0.0 if status == "ok" else 0.25 if status == "warning" else 1.0,
+            "fallback_source": fallback.get(f["name"], "safe demo fallback"),
+            "degraded_mode": status != "ok",
+            "last_successful_fetch": f.get("last_update_ts"),
+            "confidence_score": confidence,
+        })
+    ok = sum(1 for f in enriched if f["status"] == "ok")
+    return {"status": "ok" if ok == len(enriched) else "degraded", "sources": enriched, "fallback_chain": ["Pyth", "Kraken", "CoinGecko", "yfinance", "Stooq", "mock/demo equity fallback"], "ts": now.isoformat()}

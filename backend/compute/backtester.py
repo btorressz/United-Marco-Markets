@@ -38,9 +38,14 @@ def _compute_sharpe(returns: list[float], risk_free_rate: float = 0.04) -> float
     mean_r = sum(returns) / n
     variance = sum((r - mean_r) ** 2 for r in returns) / (n - 1)
     std_r = math.sqrt(variance) if variance > 0 else 0.0
-    if std_r == 0:
-        return 0.0
     ann_mean = mean_r * 252
+    if std_r == 0:
+        excess = ann_mean - risk_free_rate
+        if excess > 0:
+            return 999.0
+        if excess < 0:
+            return -999.0
+        return 0.0
     ann_std = std_r * math.sqrt(252)
     return (ann_mean - risk_free_rate) / ann_std
 

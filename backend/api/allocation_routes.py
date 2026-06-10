@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from backend.compute.capital_allocator import allocate
+from backend.compute.capital_allocator import allocate, execution_preview
 from backend.core.state_store import StateStore
 from backend.core.event_bus import EventBus, EventType
 
@@ -109,3 +109,16 @@ def rebalance_preview(body: dict[str, Any] | None = None):
     )
 
     return result
+
+
+@router.post("/execution-preview")
+def allocation_execution_preview(body: dict[str, Any] | None = None):
+    body = body or {}
+    try:
+        state = _build_state_from_redis()
+        allocation = allocate(state)
+        portfolio = _store.get_snapshot("portfolio:latest") or {}
+        return execution_preview(body, allocation=allocation, portfolio=portfolio)
+    except Exception as exc:
+        logger.warning("Allocation execution preview degraded: %s", exc, exc_info=True)
+        return {"preview": True, "paper_mode_only": True, "auto_trade": False, "allowed_size": 0.0, "suggested_size": 0.0, "blocked_reason": "preview unavailable", "warnings": [str(exc)], "reasoning": ["fail-open degraded preview"], "ts": datetime.now(timezone.utc).isoformat()}
