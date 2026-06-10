@@ -29,6 +29,9 @@ _FEED_DEFINITIONS: list[dict[str, Any]] = [
 _WARNING_MULTIPLIER = 3
 _ERROR_MULTIPLIER = 10
 
+_redis_last_error: str = ""
+_redis_last_ok_ts: float = 0.0
+
 
 def _get_feed_status(feed_def: dict[str, Any], now: datetime) -> dict[str, Any]:
     name = feed_def["name"]
@@ -127,3 +130,63 @@ def feed_status():
         "total": total,
         "ts": now.isoformat(),
     }
+
+
+@router.get("/redis")
+def redis_health():
+    global _redis_last_error, _redis_last_ok_ts
+
+    result: dict[str, Any] = {
+        "connected": False,
+        "ping_latency_ms": None,
+        "memory_used_mb": None,
+        "key_count_estimate": None,
+        "pubsub_status": "unknown",
+        "last_error": _redis_last_error,
+        "fallback_mode": True,
+        "ts": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        r = _state_store.get_redis()
+        if r is None:
+            result["fallback_mode"] = True
+            result["last_error"] = _redis_last_error or "Redis unavailable"
+            return result
+
+        t0 = time.monotonic()
+        r.ping()
+        latency_ms = (time.monotonic() - t0) * 1000
+
+        result["connected"] = True
+        result["ping_latency_ms"] = round(latency_ms, 2)
+        result["fallback_mode"] = False
+        _redis_last_ok_ts = time.time()
+
+        try:
+            info = r.info("memory")
+            used_bytes = info.get("used_memory", 0)
+            result["memory_used_mb"] = round(used_bytes / 1024 / 1024, 2)
+        except Exception:
+            pass
+
+        try:
+            result["key_count_estimate"] = r.dbsize()
+        except Exception:
+            pass
+
+        try:
+            pubsub_info = r.info("clients")
+            result["pubsub_status"] = "ok" if pubsub_info else "unknown"
+        except Exception:
+            result["pubsub_status"] = "ok"
+
+        result["last_error"] = ""
+        _redis_last_error = ""
+
+    except Exception as exc:
+        _redis_last_error = str(exc)
+        result["last_error"] = str(exc)
+        result["fallback_mode"] = True
+
+    return result
