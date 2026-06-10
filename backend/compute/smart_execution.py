@@ -146,3 +146,45 @@ def estimate_twap_slippage(total_size: float, n_slices: int, market_slippage_bps
     slice_size = total_size / n_slices
     urgency_discount = max(0.3, 1.0 - (n_slices - 1) * 0.05)
     return round(market_slippage_bps * urgency_discount, 2)
+
+
+def create_smart_order(
+    venue: str,
+    market: str,
+    side: str,
+    total_size: float,
+    n_slices: int = 5,
+    interval_seconds: int = 60,
+    mode: str = "TWAP",
+    max_slippage_bps: float = 25.0,
+    reference_price: float = 0.0,
+) -> dict[str, Any]:
+    mode = (mode or "TWAP").upper()
+    plan = create_smart_execution(venue, market, side, total_size, n_slices, interval_seconds, mode, max_slippage_bps)
+    weights = [1.0 / plan["n_slices"]] * plan["n_slices"]
+    if mode == "VWAP":
+        raw = [1 + math.sin((i + 1) / plan["n_slices"] * math.pi) for i in range(plan["n_slices"])]
+        total = sum(raw)
+        weights = [r / total for r in raw]
+    from datetime import timedelta
+    created = datetime.fromisoformat(plan["created_at"])
+    schedule = []
+    running_size = 0.0
+    for i, w in enumerate(weights, start=1):
+        slice_size = round(total_size * w, 8) if i < plan["n_slices"] else round(total_size - running_size, 8)
+        running_size += slice_size
+        est_slip = min(max_slippage_bps, estimate_twap_slippage(slice_size, max(1, plan["n_slices"]), 6.0) * (1.15 if mode == "VWAP" else 1.0))
+        schedule.append({
+            "slice_num": i,
+            "scheduled_at": (created + timedelta(seconds=(i - 1) * interval_seconds)).isoformat(),
+            "target_size": slice_size,
+            "status": "pending",
+            "estimated_slippage_bps": round(est_slip, 2),
+            "realized_slippage_bps": None,
+            "reference_price": reference_price,
+        })
+    plan["mode"] = mode
+    plan["schedule"] = schedule
+    plan["estimated_slippage_bps"] = round(sum(s["estimated_slippage_bps"] for s in schedule) / len(schedule), 2)
+    plan["progress_pct"] = 0.0
+    return plan

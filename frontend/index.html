@@ -30,6 +30,7 @@
       <button class="tab-btn" data-tab="stablecoins">Stablecoins</button>
       <button class="tab-btn" data-tab="strategy">Strategy</button>
       <button class="tab-btn" data-tab="execution">Execution</button>
+      <button class="tab-btn" data-tab="equities">Equities</button>
       <button class="tab-btn" data-tab="risk">Risk</button>
       <button class="tab-btn" data-tab="agents">Agents</button>
     </nav>
@@ -339,6 +340,21 @@
           <div class="empty-state"><div class="empty-state-text">Loading ML prediction...</div></div>
         </div>
 
+        <div class="section-title">Strategy Performance</div>
+        <div class="card" id="strategy-performance-panel">
+          <div class="empty-state"><div class="empty-state-text">Loading strategy performance...</div></div>
+        </div>
+
+        <div class="section-title">Replay Trade Simulation</div>
+        <div class="card">
+          <form id="replay-sim-form" class="inline-form">
+            <div class="form-group"><label class="form-label">Scenario</label><select name="scenario" class="form-select"><option value="tariff_shock">Tariff Shock</option><option value="risk_off">Risk Off</option></select></div>
+            <div class="form-group"><label class="form-label">Capital</label><input name="initial_capital" class="form-input" type="number" value="100000"></div>
+            <div class="form-group"><button type="submit" class="btn btn-primary">Run Simulation</button></div>
+          </form>
+          <div id="replay-sim-panel" style="margin-top:12px"><div class="empty-state"><div class="empty-state-text">Submit form to simulate proposal-only trade decisions</div></div></div>
+        </div>
+
         <div class="section-title">Historical Backtest</div>
         <div class="card">
           <form id="backtest-form" class="inline-form">
@@ -429,6 +445,17 @@
 
         <div class="grid-2" style="margin-top:16px">
           <div>
+            <div class="section-title">Allocation Execution Preview</div>
+            <div class="card" id="allocation-preview-panel"><div class="empty-state"><div class="empty-state-text">Preview loads from the order form without routing trades</div></div></div>
+          </div>
+          <div>
+            <div class="section-title">Conditional / Smart Orders</div>
+            <div class="card" id="advanced-orders-panel"><div class="empty-state"><div class="empty-state-text">Loading advanced paper order controls...</div></div></div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div>
             <div class="section-title">Open Positions</div>
             <div class="table-scroll">
               <table>
@@ -457,6 +484,31 @@
             <tbody id="trades-tbody"></tbody>
           </table>
         </div>
+      </div>
+
+
+      <!-- EQUITIES TAB -->
+      <div id="tab-equities" class="tab-panel">
+        <div class="section-title">Equity Market Overview</div>
+        <div class="metric-row" id="equity-overview-cards"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Selected Ticker Chart</span><span id="equity-provider-badge" class="freshness-badge nodata"><span class="freshness-dot"></span> LOADING</span></div>
+            <select id="equity-ticker-select" class="form-select" style="max-width:140px;margin-bottom:8px"><option>SPY</option><option>QQQ</option><option>AAPL</option><option>TSLA</option><option>NVDA</option><option>CAT</option></select>
+            <div class="chart-container"><canvas id="equity-chart"></canvas></div>
+          </div>
+          <div class="card" id="equity-cross-asset-panel"><div class="empty-state"><div class="empty-state-text">Loading cross-asset risk...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card"><div class="card-header"><span class="card-title">Sector ETF Heatmap</span></div><div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Sector</th><th>5D</th><th>Vol</th><th>RS vs SPY</th></tr></thead><tbody id="equity-sector-tbody"></tbody></table></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">Tariff-Sensitive Watchlist</span></div><div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Sector</th><th>Price</th><th>1M</th><th>Vol/Avg</th></tr></thead><tbody id="equity-watchlist-tbody"></tbody></table></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="equity-tariff-panel"><div class="empty-state"><div class="empty-state-text">Loading tariff exposure...</div></div></div>
+          <div class="card" id="equity-agent-panel"><div class="empty-state"><div class="empty-state-text">Loading equity agent signals...</div></div></div>
+        </div>
+        <div class="section-title">Data Quality</div>
+        <div class="card" id="data-quality-panel"><div class="empty-state"><div class="empty-state-text">Loading data quality...</div></div></div>
       </div>
 
       <!-- RISK TAB -->
@@ -591,6 +643,11 @@
 
         <div class="section-title">Agent Registry</div>
         <div id="agent-registry"></div>
+
+        <div class="section-title">Agent Memory / Performance</div>
+        <div class="card" id="agent-performance-panel"><div class="empty-state"><div class="empty-state-text">Loading agent performance...</div></div></div>
+        <div class="section-title">Signal History</div>
+        <div class="card" id="agent-history-panel"><div class="empty-state"><div class="empty-state-text">Loading signal history...</div></div></div>
       </div>
 
     </div>

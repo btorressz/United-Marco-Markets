@@ -1236,6 +1236,104 @@ const UI = (() => {
     `;
   }
 
+
+  function pctBadge(v) {
+    const n = Number(v || 0);
+    const cls = n >= 0 ? 'badge-green' : 'badge-red';
+    return `<span class="badge ${cls}">${(n * 100).toFixed(2)}%</span>`;
+  }
+
+
+  function renderStrategyPerformance(data) {
+    const panel = document.getElementById('strategy-performance-panel');
+    if (!panel) return;
+    const rows = Object.values((data || {}).strategies || {});
+    panel.innerHTML = `<div class="card-header"><span class="card-title">Strategy Comparison</span></div><div class="metric-row">${rows.slice(0,4).map(r => `<div class="metric-box"><div class="metric-label">${r.strategy_id}</div><div class="metric-value ${Number(r.total_pnl || 0) >= 0 ? 'green' : 'red'}">${formatPrice(r.total_pnl || 0)}</div><div style="font-size:11px;color:var(--text-muted)">Sharpe ${formatNumber(r.sharpe, 2)} · DD ${(Number(r.max_drawdown || 0) * 100).toFixed(1)}% · Win ${(Number(r.win_rate || 0) * 100).toFixed(0)}%</div></div>`).join('')}</div><div class="table-scroll"><table><thead><tr><th>Strategy</th><th>PnL</th><th>Sharpe</th><th>Max DD</th><th>Win</th><th>Trades</th><th>Avg Slip</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.strategy_id}</td><td>${formatPrice(r.total_pnl)}</td><td>${formatNumber(r.sharpe, 2)}</td><td>${(Number(r.max_drawdown || 0) * 100).toFixed(1)}%</td><td>${(Number(r.win_rate || 0) * 100).toFixed(0)}%</td><td>${r.trade_count}</td><td>${formatNumber(r.avg_slippage_bps, 1)} bps</td></tr>`).join('') || '<tr><td colspan="7">No strategy data</td></tr>'}</tbody></table></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">Best: ${(data.summary || {}).best_strategy || '--'} · Worst: ${(data.summary || {}).worst_strategy || '--'} · ${data.capital_allocation_feedback || ''}</div>`;
+  }
+
+  function renderExecutionEnhancements(data) {
+    const preview = document.getElementById('allocation-preview-panel');
+    if (preview) {
+      const p = data.preview || {};
+      preview.innerHTML = `<div class="card-header"><span class="card-title">Pre-Trade Sizing Preview</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Target Allocation</div><div class="metric-value blue">${(Number(p.target_allocation || 0) * 100).toFixed(1)}%</div></div><div class="metric-box"><div class="metric-label">Current Allocation</div><div class="metric-value">${(Number(p.current_allocation || 0) * 100).toFixed(1)}%</div></div><div class="metric-box"><div class="metric-label">Allowed Size</div><div class="metric-value green">${formatNumber(p.allowed_size, 4)}</div></div></div>${(p.warnings || []).map(w => `<div class="badge badge-yellow" style="margin:2px">${w}</div>`).join('')}<div style="font-size:12px;color:var(--text-muted);margin-top:6px">${(p.reasoning || []).join('; ') || 'No preview yet'}</div>`;
+    }
+    const adv = document.getElementById('advanced-orders-panel');
+    if (adv) {
+      const cond = (data.conditional || {}).orders || [];
+      const smart = (data.smart || {}).orders || [];
+      adv.innerHTML = `<div class="card-header"><span class="card-title">Advanced Paper Orders</span></div><div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Stop loss, take profit, trailing stop, bracket, TWAP and VWAP are paper-mode/proposal-safe.</div><b>Conditional Orders</b><div class="table-scroll"><table><thead><tr><th>ID</th><th>Market</th><th>Type</th><th>Status</th><th>Trigger</th><th>Parent</th></tr></thead><tbody>${cond.slice(0,5).map(o => `<tr><td>${String(o.id || '').slice(0,8)}</td><td>${o.market}</td><td>${o.order_type}</td><td>${o.status}</td><td>${formatNumber(o.current_trigger_level || o.trigger_price, 2)}</td><td>${o.parent_id ? String(o.parent_id).slice(0,8) : '--'}</td></tr>`).join('') || '<tr><td colspan="6">No active conditional orders</td></tr>'}</tbody></table></div><b>Smart Orders</b><div class="table-scroll"><table><thead><tr><th>ID</th><th>Mode</th><th>Market</th><th>Progress</th><th>Est Slip</th><th>Status</th></tr></thead><tbody>${smart.slice(0,5).map(o => `<tr><td>${String(o.exec_id || '').slice(0,8)}</td><td>${o.mode || o.execution_style}</td><td>${o.market}</td><td>${o.completed_slices || 0}/${o.n_slices || 0}</td><td>${formatNumber(o.estimated_slippage_bps, 1)} bps</td><td>${o.status}</td></tr>`).join('') || '<tr><td colspan="6">No smart orders</td></tr>'}</tbody></table></div>`;
+    }
+  }
+
+  function renderReplaySimulation(data) {
+    const panel = document.getElementById('replay-sim-panel');
+    if (!panel || !data) return;
+    const timeline = data.simulated_timeline || [];
+    panel.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">Final Value</div><div class="metric-value green">${formatPrice(data.final_portfolio_value)}</div></div><div class="metric-box"><div class="metric-label">Max Drawdown</div><div class="metric-value red">${(Number(data.max_drawdown || 0) * 100).toFixed(1)}%</div></div></div><div class="table-scroll"><table><thead><tr><th>Step</th><th>Value</th><th>Actions</th><th>Decision</th></tr></thead><tbody>${timeline.slice(-8).map(t => `<tr><td>${t.step}</td><td>${formatPrice(t.portfolio_value)}</td><td>${(t.proposed_actions || []).join(', ')}</td><td>${t.decision_log}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  function renderAgentMemory(perf, hist) {
+    const p = document.getElementById('agent-performance-panel');
+    if (p) {
+      const rows = (perf || {}).agents || [];
+      p.innerHTML = `<div class="metric-row">${rows.map(r => `<div class="metric-box"><div class="metric-label">${r.agent}</div><div class="metric-value blue">${(Number(r.hit_rate || 0) * 100).toFixed(0)}%</div><div style="font-size:11px;color:var(--text-muted)">${r.signal_count} signals · conf ${(Number(r.average_confidence || 0) * 100).toFixed(0)}%</div></div>`).join('') || '<div class="empty-state-text">No memory records yet</div>'}</div>`;
+    }
+    const h = document.getElementById('agent-history-panel');
+    if (h) {
+      const rows = (hist || {}).history || [];
+      h.innerHTML = `<div class="table-scroll"><table><thead><tr><th>Agent</th><th>Ticker</th><th>Signal</th><th>Conf</th><th>Outcome</th></tr></thead><tbody>${rows.slice(0,25).map(r => `<tr><td>${r.agent}</td><td>${r.ticker || '--'}</td><td>${r.signal}</td><td>${(Number(r.confidence || 0) * 100).toFixed(0)}%</td><td>${formatNumber(r.realized_outcome, 4)}</td></tr>`).join('') || '<tr><td colspan="5">No signal history</td></tr>'}</tbody></table></div>`;
+    }
+  }
+
+  function renderEquitiesTab(data) {
+    const overview = data.overview || {};
+    const cards = document.getElementById('equity-overview-cards');
+    if (cards) {
+      const rows = overview.market_overview || [];
+      cards.innerHTML = rows.map(r => `<div class="metric-box"><div class="metric-label">${r.ticker}</div><div class="metric-value ${Number(r.daily_return || 0) >= 0 ? 'green' : 'red'}">${formatPrice(r.price)}</div><div style="font-size:11px;color:var(--text-muted)">1D ${(Number(r.daily_return || 0) * 100).toFixed(2)}% · Vol ${(Number(r.realized_volatility || 0) * 100).toFixed(1)}%</div></div>`).join('') || '<div class="empty-state-text">No equity overview data</div>';
+    }
+    const sectorBody = document.getElementById('equity-sector-tbody');
+    if (sectorBody) {
+      const rows = overview.sector_etfs || [];
+      sectorBody.innerHTML = rows.map(r => `<tr><td>${r.ticker}</td><td>${r.sector || '--'}</td><td>${pctBadge(r.return_5d)}</td><td>${(Number(r.realized_volatility || 0) * 100).toFixed(1)}%</td><td>${pctBadge(r.relative_strength_vs_spy)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty-state-text">No sector data</td></tr>';
+    }
+    const watchBody = document.getElementById('equity-watchlist-tbody');
+    if (watchBody) {
+      const rows = overview.tariff_watchlist || [];
+      watchBody.innerHTML = rows.map(r => `<tr><td>${r.ticker}</td><td>${r.sector || '--'}</td><td>${formatPrice(r.price)}</td><td>${pctBadge(r.return_1m)}</td><td>${formatNumber(r.volume_vs_avg, 2)}x</td></tr>`).join('') || '<tr><td colspan="5" class="empty-state-text">No watchlist data</td></tr>';
+    }
+    const provider = document.getElementById('equity-provider-badge');
+    if (provider) {
+      const degraded = overview.status !== 'ok';
+      provider.className = `freshness-badge ${degraded ? 'stale' : 'fresh'}`;
+      provider.innerHTML = `<span class="freshness-dot"></span> ${degraded ? 'DEGRADED FALLBACK' : 'FRESH'}`;
+    }
+    if (data.history && window._equityChart && typeof Charts !== 'undefined') {
+      const hist = data.history.history || [];
+      Charts.updateChart(window._equityChart, { labels: hist.map(x => formatTimestamp(x.ts).slice(0, 10)), datasets: [{ label: `${data.history.ticker || 'SPY'} Close`, data: hist.map(x => x.close) }] });
+    }
+    const tariffPanel = document.getElementById('equity-tariff-panel');
+    if (tariffPanel) {
+      const scores = (data.tariff || {}).scores || [];
+      tariffPanel.innerHTML = `<div class="card-header"><span class="card-title">Equity Tariff Exposure</span></div>${((data.tariff || {}).warnings || []).map(w => `<div class="badge badge-yellow" style="margin:2px">${w}</div>`).join('')}<div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Score</th><th>Severity</th><th>Reasoning</th></tr></thead><tbody>${scores.slice(0, 12).map(s => `<tr><td>${s.ticker}</td><td>${formatNumber(s.score, 1)}</td><td><span class="badge ${s.severity === 'high' ? 'badge-red' : s.severity === 'medium' ? 'badge-yellow' : 'badge-green'}">${s.severity}</span></td><td style="font-size:11px;color:var(--text-muted)">${(s.reasoning || []).slice(0,2).join('; ')}</td></tr>`).join('') || '<tr><td colspan="4">No exposure scores</td></tr>'}</tbody></table></div>`;
+    }
+    const agentPanel = document.getElementById('equity-agent-panel');
+    if (agentPanel) {
+      const sigs = (data.risk || {}).signals || [];
+      agentPanel.innerHTML = `<div class="card-header"><span class="card-title">Equity Risk Agent Signals</span></div>${sigs.slice(0, 10).map(s => `<div style="padding:8px;border-bottom:1px solid var(--border-color)"><span class="badge badge-blue">${s.signal}</span> <b>${s.ticker}</b> <span style="color:var(--text-muted);font-size:12px">${s.reason}</span></div>`).join('') || '<div class="empty-state-text">No active equity signals</div>'}`;
+    }
+    const cross = document.getElementById('equity-cross-asset-panel');
+    if (cross) {
+      const c = data.cross || {};
+      cross.innerHTML = `<div class="card-header"><span class="card-title">Cross-Asset Risk On/Off</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Regime</div><div class="metric-value ${c.regime === 'risk_off' ? 'red' : 'green'}">${c.regime || '--'}</div></div><div class="metric-box"><div class="metric-label">Risk-On Score</div><div class="metric-value blue">${formatNumber(c.risk_on_off_score, 1)}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Equity vol ${(Number(c.equity_volatility || 0) * 100).toFixed(1)}% vs crypto proxy ${(Number(c.crypto_volatility_proxy || 0) * 100).toFixed(1)}%; tariff index ${formatNumber(c.tariff_index, 1)}</div>`;
+    }
+    const dq = document.getElementById('data-quality-panel');
+    if (dq) {
+      const sources = (data.quality || {}).sources || [];
+      dq.innerHTML = `<div class="card-header"><span class="card-title">Data Quality Dashboard</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">${sources.map(s => `<div class="metric-box"><div class="metric-label">${s.name}</div><div><span class="badge ${s.status === 'ok' ? 'badge-green' : 'badge-yellow'}">${s.status}</span></div><div style="font-size:11px;color:var(--text-muted)">confidence ${(Number(s.confidence_score || 0) * 100).toFixed(0)}% · fallback ${s.fallback_source || '--'}</div></div>`).join('')}</div>`;
+    }
+  }
+
   return {
     formatTimestamp,
     formatNumber,
@@ -1258,6 +1356,11 @@ const UI = (() => {
     renderVolRegimePanel,
     renderPortfolioRiskPanel,
     renderRedisHealth,
+    renderEquitiesTab,
+    renderStrategyPerformance,
+    renderExecutionEnhancements,
+    renderReplaySimulation,
+    renderAgentMemory,
     addEventToTimeline,
     renderTimeline,
     updateConnectionStatus,
