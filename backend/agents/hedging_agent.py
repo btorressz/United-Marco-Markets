@@ -167,6 +167,5 @@ class HedgingAgent:
                 "proposed_action": "throttle",
             })
 
-        return signals
 
         return signals
