@@ -78,3 +78,5 @@ class ExecutionAgent:
             })
 
         return signals
+
+        return signals
