@@ -466,7 +466,6 @@ All keys use `desk:` prefix with TTLs. State store also supports legacy `index:l
 - `tests/test_institutional_intelligence.py` now verifies route registration uniqueness, requested institutional endpoint availability, safe JSON response shapes, and fail-open behavior for missing providers/storage and empty datasets.
 - `frontend/assets/ui.js` institutional renderers now defensively default null inputs to empty objects and use safe report-copy payload attributes.
 - `backend/compute/backtester.py` now handles constant positive return streams as positive Sharpe instead of zero, matching portfolio-risk test expectations.
-<<<<<<< HEAD
 
 ## Geopolitical Risk Intelligence Layer
 
@@ -496,5 +495,3 @@ All keys use `desk:` prefix with TTLs. State store also supports legacy `index:l
 
 ### Tests
 - `tests/test_geopolitical_intelligence.py` covers index scoring, sanctions/conflict/shipping/energy engines, market impact, protection proposal safety, agent signal structure, endpoint response shapes, scenario output, fail-open payloads, and no autonomous trading.
-=======
->>>>>>> main

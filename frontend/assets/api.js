@@ -185,8 +185,6 @@ const API = (() => {
     getTariffRiskReport: () => fetchJSON('/api/reports/tariff-risk'),
     getPortfolioRiskReport: () => fetchJSON('/api/reports/portfolio-risk'),
     getAgentSignalsReport: () => fetchJSON('/api/reports/agent-signals'),
-<<<<<<< HEAD
-
     getGeopoliticalIndex: () => fetchJSON('/api/geopolitical/index'),
     getGeopoliticalEvents: () => fetchJSON('/api/geopolitical/events'),
     getGeopoliticalSanctions: () => fetchJSON('/api/geopolitical/sanctions'),
@@ -209,7 +207,6 @@ const API = (() => {
     getGeopoliticalAgentSignals: () => fetchJSON('/api/geopolitical/agents/signals'),
     getGeopoliticalDailyBrief: () => fetchJSON('/api/geopolitical/reports/daily-brief'),
     getGeopoliticalProtectionBrief: () => fetchJSON('/api/geopolitical/reports/protection-brief'),
-=======
->>>>>>> main
+
   };
 })();

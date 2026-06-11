@@ -183,7 +183,7 @@ const Charts = (() => {
     });
   }
 
-<<<<<<< HEAD
+
 
 
   function createGeoRiskChart(canvasId) {
@@ -196,8 +196,7 @@ const Charts = (() => {
     });
   }
 
-=======
->>>>>>> main
+
   function updateChart(chart, newData) {
     if (!chart) return;
     if (newData.labels) chart.data.labels = newData.labels;
@@ -225,11 +224,11 @@ const Charts = (() => {
 
   function reThemeAllCharts() {
     const c = getThemeColors();
-<<<<<<< HEAD
+
     const allCharts = [window._indexChart, window._fundingChart, window._divergenceChart, window._mcChart, window._equityChart, window._geoRiskChart].filter(Boolean);
-=======
+
     const allCharts = [window._indexChart, window._fundingChart, window._divergenceChart, window._mcChart, window._equityChart].filter(Boolean);
->>>>>>> main
+
     allCharts.forEach(chart => {
       if (chart.options.plugins.tooltip) {
         chart.options.plugins.tooltip.backgroundColor = c.tooltipBg;
@@ -256,10 +255,8 @@ const Charts = (() => {
     createDivergenceChart,
     createMCChart,
     createEquityChart,
-<<<<<<< HEAD
+
     createGeoRiskChart,
-=======
->>>>>>> main
     updateChart,
     reThemeAllCharts,
   };

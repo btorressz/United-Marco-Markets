@@ -98,11 +98,10 @@ def create_app():
     from backend.api.signals_routes import router as signals_router
     from backend.api.watchlists_routes import router as watchlists_router
     from backend.api.reports_routes import router as reports_router
-<<<<<<< HEAD
+
     from backend.api.geopolitical_routes import router as geopolitical_router
     from backend.api.protection_routes import router as protection_router
-=======
->>>>>>> main
+
 
     app.include_router(index_router)
     app.include_router(markets_router)
@@ -145,11 +144,8 @@ def create_app():
     app.include_router(signals_router)
     app.include_router(watchlists_router)
     app.include_router(reports_router)
-<<<<<<< HEAD
     app.include_router(geopolitical_router)
     app.include_router(protection_router)
-=======
->>>>>>> main
 
     @app.get("/")
     def root():

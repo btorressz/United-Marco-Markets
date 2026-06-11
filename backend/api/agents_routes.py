@@ -135,7 +135,6 @@ def get_agent_signals():
     except Exception:
         logger.debug("Hedging agent error", exc_info=True)
 
-<<<<<<< HEAD
     try:
         from backend.compute.geopolitical_risk import compute_geopolitical_index
         from backend.compute.portfolio_protection import protection_protocol
@@ -149,8 +148,7 @@ def get_agent_signals():
     except Exception:
         logger.debug("Geopolitical agents error", exc_info=True)
 
-=======
->>>>>>> main
+
     _record_signals(signals)
     _store.set_snapshot("agents:signals", {"signals": signals, "ts": datetime.now(timezone.utc).isoformat()}, ttl=30)
     return {"signals": signals, "agent_count": 12, "ts": datetime.now(timezone.utc).isoformat()}

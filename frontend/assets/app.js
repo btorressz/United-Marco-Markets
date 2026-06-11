@@ -23,10 +23,7 @@ const App = (() => {
     initBacktestForm();
     initReplaySimForm();
     initScenarioForm();
-<<<<<<< HEAD
     initGeoScenarioForm();
-=======
->>>>>>> main
     initEquityControls();
     initFeedStatusToggle();
     initAutoRefreshToggle();
@@ -128,10 +125,8 @@ const App = (() => {
     window._divergenceChart = Charts.createDivergenceChart('divergence-chart');
     window._mcChart = Charts.createMCChart('mc-chart');
     window._equityChart = Charts.createEquityChart('equity-chart');
-<<<<<<< HEAD
     window._geoRiskChart = Charts.createGeoRiskChart('geo-risk-chart');
-=======
->>>>>>> main
+
   }
 
   function initWebSocket() {
@@ -324,10 +319,7 @@ const App = (() => {
         case 'strategy': await refreshStrategy(); break;
         case 'execution': await refreshExecution(); break;
         case 'equities': await refreshEquities(); break;
-<<<<<<< HEAD
         case 'geopolitics': await refreshGeopolitics(); break;
-=======
->>>>>>> main
         case 'risk': await refreshRisk(); break;
         case 'agents': await refreshAgents(); break;
       }
@@ -498,7 +490,7 @@ const App = (() => {
     });
   }
 
-<<<<<<< HEAD
+
 
   function initGeoScenarioForm() {
     const form = document.getElementById('geo-scenario-form');
@@ -539,8 +531,7 @@ const App = (() => {
     });
   }
 
-=======
->>>>>>> main
+
   async function refreshEquities() {
     const ticker = (document.getElementById('equity-ticker-select') || {}).value || 'SPY';
     const [overview, history, risk, tariff, cross, quality, sensitivity, correlations, contagion, watchlists, dailyBrief, tariffReport] = await Promise.allSettled([
@@ -566,7 +557,7 @@ const App = (() => {
       quality: quality.status === 'fulfilled' ? quality.value : null,
     });
     UI.renderInstitutionalLayer({ sensitivity: sensitivity.status === 'fulfilled' ? sensitivity.value : null, correlations: correlations.status === 'fulfilled' ? correlations.value : null, contagion: contagion.status === 'fulfilled' ? contagion.value : null, watchlists: watchlists.status === 'fulfilled' ? watchlists.value : null, dailyBrief: dailyBrief.status === 'fulfilled' ? dailyBrief.value : null, tariffReport: tariffReport.status === 'fulfilled' ? tariffReport.value : null });
-<<<<<<< HEAD
+
   }
 
 
@@ -597,8 +588,7 @@ const App = (() => {
       dailyBrief: dailyBrief.status === 'fulfilled' ? dailyBrief.value : null,
       protectionBrief: protectionBrief.status === 'fulfilled' ? protectionBrief.value : null,
     });
-=======
->>>>>>> main
+
   }
 
   async function refreshRisk() {

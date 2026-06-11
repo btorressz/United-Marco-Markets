@@ -1408,7 +1408,7 @@ const UI = (() => {
     }
   }
 
-<<<<<<< HEAD
+
 
   function renderGeopoliticsTab(data) {
     data = data || {};
@@ -1483,8 +1483,7 @@ const UI = (() => {
     panel.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">PnL Impact</div><div class="metric-value red">${formatPrice(data.portfolio_pnl_impact)}</div></div><div class="metric-box"><div class="metric-label">Protection</div><div class="metric-value blue">${data.protection_mode || '--'}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Posture: ${data.suggested_risk_posture || '--'} · Hedges: ${(data.hedge_suggestions || []).join('; ')}</div>`;
   }
 
-=======
->>>>>>> main
+
   return {
     formatTimestamp,
     formatNumber,
@@ -1512,11 +1511,9 @@ const UI = (() => {
     renderScenarioResult,
     renderRiskIntelligence,
     renderAgentConsensusAndAttribution,
-<<<<<<< HEAD
+
     renderGeopoliticsTab,
     renderGeoScenarioResult,
-=======
->>>>>>> main
     renderEquitiesTab,
     renderStrategyPerformance,
     renderExecutionEnhancements,
