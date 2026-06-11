@@ -109,6 +109,7 @@ Before every trade:
 
 ### Verification
 - Full pytest suite now passes in the project virtual environment.
+<<<<<<< HEAD
 
 ## 2026-06-11 — Geopolitical Risk Intelligence Layer
 
@@ -119,3 +120,5 @@ Before every trade:
 - Added the vanilla JS **Geopolitics** tab with risk index, component/regional panels, events, sanctions, conflict, shipping, energy, market impact, scenario, protection, agent, and report panels.
 - Added tests for compute engines, agent signal shapes, endpoint response shapes, fail-open payloads, scenario output, protection output, and no-autonomous-trading assertions.
 - Safety: geopolitical/sanctions outputs remain research/development only, informational/proposal-only, not legal/financial/investment advice, and degraded/fallback data is clearly marked.
+=======
+>>>>>>> main

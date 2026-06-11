@@ -212,6 +212,7 @@ All new outputs are deterministic, heuristic, explainable, and proposal-only. Mi
 
 ### Institutional Layer Audit Status
 The institutional intelligence layer has been audited for routing, endpoint availability, frontend panel wiring, render safety, and fail-open behavior. Additional tests verify route uniqueness, safe JSON shapes, missing Stooq/WITS/GDELT/Redis/Postgres handling, empty datasets, and full-suite compatibility.
+<<<<<<< HEAD
 
 ## 2026 Geopolitical Risk Intelligence Layer
 
@@ -225,3 +226,5 @@ This phase adds a proposal-only geopolitical risk layer that links sanctions, co
 
 ### Geopolitical safety notes
 Geopolitical and sanctions outputs are research/development aids only. They are not legal, financial, or investment advice. If GDELT, WITS, sanctions, equity, crypto, stablecoin, Redis, Postgres, or other providers are missing, endpoints return deterministic fallback/demo data with degraded data-quality markers. Paper mode remains the default, live trading behavior is unchanged, and no autonomous trading is added.
+=======
+>>>>>>> main

@@ -335,9 +335,12 @@ The execution changes are safety-oriented. The allocator can now say how much of
 The new layer turns the desk from a data dashboard into a proposal-only macro intelligence workflow. It starts with a macro event calendar, estimates market reactions, scores tariff beta, checks cross-asset contagion paths, runs hypothetical scenarios, recommends hedges, explains portfolio recommendations, aggregates agent consensus, attributes signal outcomes, manages custom watchlists, and creates structured JSON reports.
 
 The important safety behavior is unchanged: these tools do not trade. They explain, preview, simulate, and propose. When external data or storage is missing, every endpoint returns a degraded but valid response so the frontend keeps rendering.
+<<<<<<< HEAD
 
 ## What the Geopolitical Risk Layer Adds
 
 The geopolitical layer connects sanctions, conflict escalation, shipping chokepoints, energy and commodity shocks, export controls, cyber/policy risk, tariffs, stablecoin stress, and cross-asset risk-off behavior into a single explainable workflow. It produces a Geopolitical Market Risk Index, normalized events, market-impact estimates, portfolio protection proposals, and structured reports.
 
 All geopolitical outputs are informational and proposal-only. They do not place trades, are not legal/financial/investment advice, and use degraded fallback/demo data when live sources are unavailable so the app remains stable.
+=======
+>>>>>>> main
