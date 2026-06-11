@@ -466,3 +466,32 @@ All keys use `desk:` prefix with TTLs. State store also supports legacy `index:l
 - `tests/test_institutional_intelligence.py` now verifies route registration uniqueness, requested institutional endpoint availability, safe JSON response shapes, and fail-open behavior for missing providers/storage and empty datasets.
 - `frontend/assets/ui.js` institutional renderers now defensively default null inputs to empty objects and use safe report-copy payload attributes.
 - `backend/compute/backtester.py` now handles constant positive return streams as positive Sharpe instead of zero, matching portfolio-risk test expectations.
+
+## Geopolitical Risk Intelligence Layer
+
+### Backend compute modules
+- `backend/compute/geopolitical_risk.py` — 0-100 Geopolitical Market Risk Index, component weighting, regional/asset breakdowns, provider status, and normalized event feed construction.
+- `backend/compute/sanctions_risk.py` — sanctions/export-control risk scoring, fallback entity feed, and market impact mapping.
+- `backend/compute/conflict_escalation.py` — conflict hotspot scoring, normalized escalation events, and conflict market-impact rows.
+- `backend/compute/shipping_energy_risk.py` — chokepoint/shipping risk, supply-chain impact, and energy/commodity shock scoring.
+- `backend/compute/geopolitical_market_impact.py` — cross-asset impact estimates for equities, ETFs, commodities, crypto, and stablecoins.
+- `backend/compute/portfolio_protection.py` — proposal-only portfolio protection status and preview protocol.
+
+### Backend API routes
+- `backend/api/geopolitical_routes.py` — `/api/geopolitical/index`, `/events`, `/sanctions`, `/sanctions/impact`, `/sanctions/entities`, `/conflicts`, `/conflict/hotspots`, `/conflict/escalation`, `/conflict/market-impact`, `/chokepoints`, `/shipping-risk`, `/supply-chain-impact`, `/energy-shock`, `/commodity-impact`, `/market-impact`, `/scenario-templates`, `/scenario-run`, `/agents/signals`, `/reports/daily-brief`, and `/reports/protection-brief`.
+- `backend/api/protection_routes.py` — `/api/protection/status` and `/api/protection/preview`.
+- `main.py` registers both routers additively alongside existing institutional/equity routes.
+
+### Agents
+- `backend/agents/geopolitical_agent.py`, `backend/agents/sanctions_agent.py`, `backend/agents/conflict_agent.py`, `backend/agents/energy_shock_agent.py`, and `backend/agents/protection_agent.py` emit deterministic proposal-only signals with affected assets/regions and data-quality fields.
+- `backend/api/agents_routes.py` includes the new agents in the existing signal and registry flow.
+
+### Frontend
+- `frontend/index.html` adds a **Geopolitics** tab and panels for risk index, components, regional table, events, sanctions, conflict, shipping, energy, market impact, scenario builder, portfolio protection, agent signals, and reports.
+- `frontend/assets/api.js` adds fail-safe API wrappers for the geopolitical and protection endpoints.
+- `frontend/assets/ui.js` adds null-safe geopolitical renderers using existing card/table/badge patterns.
+- `frontend/assets/app.js` refreshes the Geopolitics tab and handles the geopolitical scenario form.
+- `frontend/assets/charts.js` adds a lightweight Chart.js component breakdown chart.
+
+### Tests
+- `tests/test_geopolitical_intelligence.py` covers index scoring, sanctions/conflict/shipping/energy engines, market impact, protection proposal safety, agent signal structure, endpoint response shapes, scenario output, fail-open payloads, and no autonomous trading.

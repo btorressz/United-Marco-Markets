@@ -10,6 +10,11 @@ from backend.agents.liquidity_agent import LiquidityAgent
 from backend.agents.hyperliquid_agent import HyperliquidAgent
 from backend.agents.jupiter_agent import JupiterAgent
 from backend.agents.hedging_agent import HedgingAgent
+from backend.agents.geopolitical_agent import GeopoliticalAgent
+from backend.agents.sanctions_agent import SanctionsAgent
+from backend.agents.conflict_agent import ConflictAgent
+from backend.agents.energy_shock_agent import EnergyShockAgent
+from backend.agents.protection_agent import ProtectionAgent
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/agents", tags=["agents"])
@@ -22,6 +27,11 @@ _liq_agent = LiquidityAgent()
 _hl_agent = HyperliquidAgent()
 _jup_agent = JupiterAgent()
 _hedge_agent = HedgingAgent()
+_geo_agent = GeopoliticalAgent()
+_sanctions_agent = SanctionsAgent()
+_conflict_agent = ConflictAgent()
+_energy_agent = EnergyShockAgent()
+_protection_agent = ProtectionAgent()
 
 
 def _build_agent_state() -> dict:
@@ -78,6 +88,10 @@ def _build_agent_state() -> dict:
         if scores:
             state["carry_score"] = scores[0].get("annualized_carry", 0)
 
+    geo = _store.get_snapshot("geopolitical:index:latest")
+    if geo:
+        state.update(geo)
+
     return state
 
 
@@ -121,9 +135,23 @@ def get_agent_signals():
     except Exception:
         logger.debug("Hedging agent error", exc_info=True)
 
+    try:
+        from backend.compute.geopolitical_risk import compute_geopolitical_index
+        from backend.compute.portfolio_protection import protection_protocol
+        geo_state = compute_geopolitical_index({"gdelt": _store.get_snapshot("gdelt:latest"), "wits": _store.get_snapshot("wits:tariff:USA:ALL:ALL") or _store.get_snapshot("wits:latest"), "stablecoin": _store.get_snapshot("stablecoin:health:latest")})
+        protection = protection_protocol({"geopolitical_index": geo_state, "data_quality": geo_state.get("data_quality", "degraded")})
+        signals.extend(_geo_agent.evaluate(geo_state))
+        signals.extend(_sanctions_agent.evaluate(geo_state))
+        signals.extend(_conflict_agent.evaluate(geo_state))
+        signals.extend(_energy_agent.evaluate(geo_state))
+        signals.extend(_protection_agent.evaluate({**geo_state, **protection}))
+    except Exception:
+        logger.debug("Geopolitical agents error", exc_info=True)
+
+
     _record_signals(signals)
     _store.set_snapshot("agents:signals", {"signals": signals, "ts": datetime.now(timezone.utc).isoformat()}, ttl=30)
-    return {"signals": signals, "agent_count": 7, "ts": datetime.now(timezone.utc).isoformat()}
+    return {"signals": signals, "agent_count": 12, "ts": datetime.now(timezone.utc).isoformat()}
 
 
 @router.get("/status")
@@ -142,6 +170,11 @@ def get_agent_status():
             {"name": "hyperliquid_agent", "status": "active", "description": "Analyzes orderbook microstructure, spread and depth on Hyperliquid"},
             {"name": "jupiter_agent", "status": "active", "description": "Monitors Jupiter quote freshness, route complexity, price impact and Solana congestion"},
             {"name": "hedging_agent", "status": "active", "description": "Position-aware hedge recommendations based on shock, vol, funding and margin signals"},
+            {"name": "geopolitical_agent", "status": "active", "description": "Proposal-only geopolitical market risk monitor"},
+            {"name": "sanctions_agent", "status": "active", "description": "Sanctions and export-control pressure monitor"},
+            {"name": "conflict_agent", "status": "active", "description": "Conflict escalation and hotspot monitor"},
+            {"name": "energy_shock_agent", "status": "active", "description": "Energy, commodity and chokepoint shock monitor"},
+            {"name": "protection_agent", "status": "active", "description": "Portfolio protection protocol proposal agent"},
         ],
         "total_signals": signal_count,
         "ts": datetime.now(timezone.utc).isoformat(),

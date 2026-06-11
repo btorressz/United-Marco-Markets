@@ -109,3 +109,15 @@ Before every trade:
 
 ### Verification
 - Full pytest suite now passes in the project virtual environment.
+
+
+## 2026-06-11 — Geopolitical Risk Intelligence Layer
+
+- Added fail-open geopolitical compute modules for sanctions pressure, conflict escalation, shipping/chokepoint risk, energy/commodity shock, market impact, geopolitical risk indexing, and portfolio protection proposals.
+- Added proposal-only geopolitical agents for geopolitical risk, sanctions, conflict, energy shock, and protection posture; these emit deterministic explainable signals and do not trade.
+- Added `/api/geopolitical/*` endpoints for index, events, sanctions, conflicts, chokepoints, shipping risk, energy shock, commodity impact, market impact, scenario templates/runs, agent signals, and geopolitical reports.
+- Added `/api/protection/status` and `/api/protection/preview` for portfolio protection status and previews.
+- Added the vanilla JS **Geopolitics** tab with risk index, component/regional panels, events, sanctions, conflict, shipping, energy, market impact, scenario, protection, agent, and report panels.
+- Added tests for compute engines, agent signal shapes, endpoint response shapes, fail-open payloads, scenario output, protection output, and no-autonomous-trading assertions.
+- Safety: geopolitical/sanctions outputs remain research/development only, informational/proposal-only, not legal/financial/investment advice, and degraded/fallback data is clearly marked.
+

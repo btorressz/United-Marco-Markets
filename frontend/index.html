@@ -31,6 +31,7 @@
       <button class="tab-btn" data-tab="strategy">Strategy</button>
       <button class="tab-btn" data-tab="execution">Execution</button>
       <button class="tab-btn" data-tab="equities">Equities</button>
+      <button class="tab-btn" data-tab="geopolitics">Geopolitics</button>
       <button class="tab-btn" data-tab="risk">Risk</button>
       <button class="tab-btn" data-tab="agents">Agents</button>
     </nav>
@@ -521,6 +522,48 @@
           <div class="card" id="institutional-reports-panel"><div class="empty-state"><div class="empty-state-text">Loading reports...</div></div></div>
         </div>
       </div>
+
+
+      <!-- GEOPOLITICS TAB -->
+      <div id="tab-geopolitics" class="tab-panel">
+        <div class="section-title">Geopolitical Risk Index</div>
+        <div class="metric-row" id="geo-risk-cards"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-header"><span class="card-title">Component Breakdown</span></div><div class="chart-container"><canvas id="geo-risk-chart"></canvas></div><div id="geo-component-panel"></div></div>
+          <div class="card" id="geo-regional-panel"><div class="empty-state"><div class="empty-state-text">Loading regional risk...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="geo-events-panel"><div class="empty-state"><div class="empty-state-text">Loading geopolitical events...</div></div></div>
+          <div class="card" id="geo-sanctions-panel"><div class="empty-state"><div class="empty-state-text">Loading sanctions monitor...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="geo-conflict-panel"><div class="empty-state"><div class="empty-state-text">Loading conflict monitor...</div></div></div>
+          <div class="card" id="geo-shipping-panel"><div class="empty-state"><div class="empty-state-text">Loading chokepoint risk...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="geo-energy-panel"><div class="empty-state"><div class="empty-state-text">Loading energy shock monitor...</div></div></div>
+          <div class="card" id="geo-impact-panel"><div class="empty-state"><div class="empty-state-text">Loading market impact...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="geo-scenario-panel">
+            <div class="card-header"><span class="card-title">Geopolitical Scenario Builder</span></div>
+            <form id="geo-scenario-form" class="inline-form">
+              <div class="form-group"><label class="form-label">Scenario</label><select name="scenario_name" class="form-select"><option>Middle East escalation</option><option>Taiwan semiconductor shock</option><option>Red Sea shipping disruption</option><option>global risk-off cascade</option></select></div>
+              <div class="form-group"><label class="form-label">Severity</label><input name="severity" class="form-input" type="number" value="70" min="0" max="100" style="width:70px"></div>
+              <div class="form-group"><label class="form-label">Conflict</label><input name="conflict_shock" class="form-input" type="number" value="20" style="width:70px"></div>
+              <div class="form-group"><label class="form-label">Energy</label><input name="energy_shock" class="form-input" type="number" value="15" style="width:70px"></div>
+              <div class="form-group"><button type="submit" class="btn btn-primary">Run Geo Scenario</button></div>
+            </form>
+            <div id="geo-scenario-result" style="margin-top:10px"><div class="empty-state-text">Run a proposal-only geopolitical scenario.</div></div>
+          </div>
+          <div class="card" id="geo-protection-panel"><div class="empty-state"><div class="empty-state-text">Loading portfolio protection...</div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card" id="geo-agent-panel"><div class="empty-state"><div class="empty-state-text">Loading geopolitical agent signals...</div></div></div>
+          <div class="card" id="geo-report-panel"><div class="empty-state"><div class="empty-state-text">Loading daily geopolitical risk brief...</div></div></div>
+        </div>
+      </div>
+
 
       <!-- RISK TAB -->
       <div id="tab-risk" class="tab-panel">

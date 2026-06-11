@@ -212,3 +212,17 @@ All new outputs are deterministic, heuristic, explainable, and proposal-only. Mi
 
 ### Institutional Layer Audit Status
 The institutional intelligence layer has been audited for routing, endpoint availability, frontend panel wiring, render safety, and fail-open behavior. Additional tests verify route uniqueness, safe JSON shapes, missing Stooq/WITS/GDELT/Redis/Postgres handling, empty datasets, and full-suite compatibility.
+
+## 2026 Geopolitical Risk Intelligence Layer
+
+This phase adds a proposal-only geopolitical risk layer that links sanctions, conflict escalation, shipping chokepoints, energy shocks, export controls, cyber/policy shocks, tariff pressure, stablecoin stress, and cross-asset risk-off behavior into a 0-100 Geopolitical Market Risk Index.
+
+### Geopolitical features
+- New `/api/geopolitical/*` endpoints expose the risk index, normalized geopolitical events, sanctions risk, conflict escalation, shipping/chokepoint risk, energy/commodity shock, market-impact estimates, geopolitical scenario templates/runs, and JSON risk briefs.
+- New `/api/protection/*` endpoints expose a Portfolio Protection Protocol that proposes defensive posture changes, hedges, stop/bracket-order suggestions, execution caution, and invalidation conditions without submitting trades.
+- New heuristic agents cover geopolitical risk, sanctions, conflict escalation, energy shock, and portfolio protection. Their signals are deterministic, explainable, and proposal-only, and they participate in the existing agent signal flow.
+- The new **Geopolitics** dashboard tab renders risk-index cards, component and regional breakdowns, event feeds, sanctions/conflict/shipping/energy panels, market-impact rows, scenario results, protection status, agent signals, and daily geopolitical risk briefs using vanilla JS and Chart.js.
+
+### Geopolitical safety notes
+Geopolitical and sanctions outputs are research/development aids only. They are not legal, financial, or investment advice. If GDELT, WITS, sanctions, equity, crypto, stablecoin, Redis, Postgres, or other providers are missing, endpoints return deterministic fallback/demo data with degraded data-quality markers. Paper mode remains the default, live trading behavior is unchanged, and no autonomous trading is added.
+

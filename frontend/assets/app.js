@@ -23,6 +23,7 @@ const App = (() => {
     initBacktestForm();
     initReplaySimForm();
     initScenarioForm();
+    initGeoScenarioForm();
     initEquityControls();
     initFeedStatusToggle();
     initAutoRefreshToggle();
@@ -124,6 +125,8 @@ const App = (() => {
     window._divergenceChart = Charts.createDivergenceChart('divergence-chart');
     window._mcChart = Charts.createMCChart('mc-chart');
     window._equityChart = Charts.createEquityChart('equity-chart');
+    window._geoRiskChart = Charts.createGeoRiskChart('geo-risk-chart');
+
   }
 
   function initWebSocket() {
@@ -316,6 +319,7 @@ const App = (() => {
         case 'strategy': await refreshStrategy(); break;
         case 'execution': await refreshExecution(); break;
         case 'equities': await refreshEquities(); break;
+        case 'geopolitics': await refreshGeopolitics(); break;
         case 'risk': await refreshRisk(); break;
         case 'agents': await refreshAgents(); break;
       }
@@ -486,6 +490,48 @@ const App = (() => {
     });
   }
 
+
+
+  function initGeoScenarioForm() {
+    const form = document.getElementById('geo-scenario-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Running...';
+      }
+      try {
+        const fieldNumber = (name, fallback = '0') => parseFloat((form.elements[name] || {}).value || fallback);
+        const body = {
+          scenario_name: (form.elements.scenario_name || {}).value || 'Middle East escalation',
+          severity: fieldNumber('severity', '55'),
+          regions: ['Middle East', 'Asia-Pacific'],
+          affected_assets: ['SPY', 'QQQ', 'SMH', 'XLE', 'BTC', 'ETH'],
+          conflict_shock: fieldNumber('conflict_shock'),
+          energy_shock: fieldNumber('energy_shock'),
+          sanctions_shock: fieldNumber('sanctions_shock'),
+          shipping_shock: fieldNumber('shipping_shock'),
+          cyber_policy_shock: fieldNumber('cyber_policy_shock'),
+          stablecoin_stress: fieldNumber('stablecoin_stress'),
+          volatility_spike: fieldNumber('volatility_spike'),
+          liquidity_depth_drop: fieldNumber('liquidity_depth_drop'),
+        };
+        const result = await API.postGeopoliticalScenarioRun(body);
+        UI.renderGeoScenarioResult(result);
+      } catch (err) {
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'geopolitical_scenario', ts: new Date().toISOString(), payload: { message: err.message } }, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Run Geopolitical Scenario';
+        }
+      }
+    });
+  }
+
+
   async function refreshEquities() {
     const ticker = (document.getElementById('equity-ticker-select') || {}).value || 'SPY';
     const [overview, history, risk, tariff, cross, quality, sensitivity, correlations, contagion, watchlists, dailyBrief, tariffReport] = await Promise.allSettled([
@@ -511,6 +557,38 @@ const App = (() => {
       quality: quality.status === 'fulfilled' ? quality.value : null,
     });
     UI.renderInstitutionalLayer({ sensitivity: sensitivity.status === 'fulfilled' ? sensitivity.value : null, correlations: correlations.status === 'fulfilled' ? correlations.value : null, contagion: contagion.status === 'fulfilled' ? contagion.value : null, watchlists: watchlists.status === 'fulfilled' ? watchlists.value : null, dailyBrief: dailyBrief.status === 'fulfilled' ? dailyBrief.value : null, tariffReport: tariffReport.status === 'fulfilled' ? tariffReport.value : null });
+
+  }
+
+
+  async function refreshGeopolitics() {
+    const [index, events, sanctions, conflicts, chokepoints, energy, impact, protection, agentSignals, dailyBrief, protectionBrief] = await Promise.allSettled([
+      API.getGeopoliticalIndex(),
+      API.getGeopoliticalEvents(),
+      API.getGeopoliticalSanctions(),
+      API.getGeopoliticalConflicts(),
+      API.getGeopoliticalChokepoints(),
+      API.getGeopoliticalEnergyShock(),
+      API.getGeopoliticalMarketImpact(),
+      API.getProtectionStatus(),
+      API.getGeopoliticalAgentSignals(),
+      API.getGeopoliticalDailyBrief(),
+      API.getGeopoliticalProtectionBrief(),
+    ]);
+    UI.renderGeopoliticsTab({
+      index: index.status === 'fulfilled' ? index.value : null,
+      events: events.status === 'fulfilled' ? events.value : null,
+      sanctions: sanctions.status === 'fulfilled' ? sanctions.value : null,
+      conflicts: conflicts.status === 'fulfilled' ? conflicts.value : null,
+      chokepoints: chokepoints.status === 'fulfilled' ? chokepoints.value : null,
+      energy: energy.status === 'fulfilled' ? energy.value : null,
+      impact: impact.status === 'fulfilled' ? impact.value : null,
+      protection: protection.status === 'fulfilled' ? protection.value : null,
+      agentSignals: agentSignals.status === 'fulfilled' ? agentSignals.value : null,
+      dailyBrief: dailyBrief.status === 'fulfilled' ? dailyBrief.value : null,
+      protectionBrief: protectionBrief.status === 'fulfilled' ? protectionBrief.value : null,
+    });
+
   }
 
   async function refreshRisk() {

@@ -223,3 +223,11 @@ It also adds tariff beta and macro sensitivity scoring, cross-asset correlations
 ## Institutional Intelligence Audit
 
 The institutional layer was audited for router registration, endpoint availability, frontend wiring, render safety, and fail-open behavior. Tests now cover duplicate route prevention, endpoint response shapes, missing provider/storage cases, and empty datasets. The full test suite passes in the repository virtual environment.
+
+## Geopolitical Risk Intelligence Layer
+
+The desk now includes a geopolitical risk workflow that extends the tariff/macro/equity intelligence stack into sanctions, conflict escalation, shipping chokepoints, energy shocks, export controls, cyber/policy shocks, and portfolio protection proposals. A 0-100 Geopolitical Market Risk Index summarizes the current regime and explains the drivers, affected regions, affected assets, provider status, confidence, and data quality.
+
+The new Geopolitics tab is informational and proposal-only. It can display events, sanctions and conflict monitors, chokepoint and energy shock panels, market-impact estimates, geopolitical scenario outputs, protection-mode suggestions, agent signals, and daily risk briefs. Missing live data uses safe fallback/demo payloads and marks the response degraded so the frontend keeps working.
+
+Sanctions and geopolitical signals are not legal, financial, or investment advice. They do not place trades. Paper mode remains the default and live trading behavior is unchanged.

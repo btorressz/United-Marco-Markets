@@ -1408,6 +1408,82 @@ const UI = (() => {
     }
   }
 
+
+
+  function renderGeopoliticsTab(data) {
+    data = data || {};
+    const idx = data.index || {};
+    const components = [
+      ['Sanctions', idx.sanctions_score], ['Conflict', idx.conflict_score], ['Shipping', idx.shipping_score], ['Energy', idx.energy_score], ['Cyber/Policy', idx.cyber_policy_score], ['Tariff', idx.tariff_score], ['Market Stress', idx.market_stress_score],
+    ];
+    const cards = document.getElementById('geo-risk-cards');
+    if (cards) {
+      const regimeCls = idx.regime === 'crisis' || idx.regime === 'high_risk' ? 'red' : idx.regime === 'elevated' ? 'yellow' : 'green';
+      cards.innerHTML = `<div class="metric-box"><div class="metric-label">Geo Risk Index</div><div class="metric-value ${regimeCls}">${formatNumber(idx.overall_score,1)}</div></div><div class="metric-box"><div class="metric-label">Regime</div><div class="metric-value ${regimeCls}">${idx.regime || '--'}</div></div><div class="metric-box"><div class="metric-label">Confidence</div><div class="metric-value blue">${(Number(idx.confidence || 0) * 100).toFixed(0)}%</div></div><div class="metric-box"><div class="metric-label">Data Quality</div><div><span class="badge ${(idx.data_quality === 'ok' || idx.data_quality === 'healthy') ? 'badge-green' : 'badge-yellow'}">${idx.data_quality || 'degraded'}</span></div></div>`;
+    }
+    const comp = document.getElementById('geo-component-panel');
+    if (comp) comp.innerHTML = `<div class="table-scroll"><table><thead><tr><th>Component</th><th>Score</th></tr></thead><tbody>${components.map(c => `<tr><td>${c[0]}</td><td>${formatNumber(c[1],1)}</td></tr>`).join('')}</tbody></table></div>`;
+    if (window._geoRiskChart && typeof Charts !== 'undefined') Charts.updateChart(window._geoRiskChart, { labels: components.map(c => c[0]), datasets: [{ data: components.map(c => Number(c[1] || 0)) }] });
+    const regional = document.getElementById('geo-regional-panel');
+    if (regional) {
+      const rows = Object.entries(idx.regional_breakdown || {});
+      regional.innerHTML = `<div class="card-header"><span class="card-title">Regional Risk Table</span></div><div class="table-scroll"><table><thead><tr><th>Region</th><th>Risk</th></tr></thead><tbody>${rows.map(([k,v]) => `<tr><td>${k}</td><td>${formatNumber(v,1)}</td></tr>`).join('') || '<tr><td colspan="2">No regional data</td></tr>'}</tbody></table></div>`;
+    }
+    const events = document.getElementById('geo-events-panel');
+    if (events) {
+      const rows = (data.events || {}).events || [];
+      events.innerHTML = `<div class="card-header"><span class="card-title">Geopolitical Events Feed</span></div><div class="table-scroll"><table><thead><tr><th>Type</th><th>Title</th><th>Region</th><th>Severity</th></tr></thead><tbody>${rows.slice(0,10).map(e => `<tr><td>${e.event_type}</td><td>${e.title}</td><td>${e.region}</td><td><span class="badge ${e.severity === 'critical' || e.severity === 'crisis' || e.severity === 'high' ? 'badge-red' : 'badge-yellow'}">${e.severity}</span></td></tr>`).join('') || '<tr><td colspan="4">No events</td></tr>'}</tbody></table></div>`;
+    }
+    const sanctions = document.getElementById('geo-sanctions-panel');
+    if (sanctions) {
+      const s = data.sanctions || {}; const programs = s.programs || [];
+      sanctions.innerHTML = `<div class="card-header"><span class="card-title">Sanctions Monitor</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Score</div><div class="metric-value red">${formatNumber(s.sanctions_score,1)}</div></div><div class="metric-box"><div class="metric-label">Quality</div><span class="badge ${s.data_quality === 'ok' ? 'badge-green' : 'badge-yellow'}">${s.data_quality || 'degraded'}</span></div></div>${programs.slice(0,5).map(p => `<div style="padding:6px;border-bottom:1px solid var(--border-color)"><b>${p.program}</b> <span style="font-size:11px;color:var(--text-muted)">${(p.affected_assets || []).join(', ')}</span></div>`).join('')}`;
+    }
+    const conflict = document.getElementById('geo-conflict-panel');
+    if (conflict) {
+      const c = data.conflicts || {}; const rows = c.hotspots || [];
+      conflict.innerHTML = `<div class="card-header"><span class="card-title">Conflict / Escalation Monitor</span></div><div class="table-scroll"><table><thead><tr><th>Hotspot</th><th>Score</th><th>Assets</th></tr></thead><tbody>${rows.slice(0,6).map(h => `<tr><td>${h.region}</td><td>${formatNumber(h.risk_score,1)}</td><td>${(h.assets || []).slice(0,4).join(', ')}</td></tr>`).join('') || '<tr><td colspan="3">No hotspots</td></tr>'}</tbody></table></div>`;
+    }
+    const shipping = document.getElementById('geo-shipping-panel');
+    if (shipping) {
+      const rows = (data.chokepoints || {}).chokepoints || [];
+      shipping.innerHTML = `<div class="card-header"><span class="card-title">Shipping / Chokepoint Risk</span></div><div class="table-scroll"><table><thead><tr><th>Chokepoint</th><th>Region</th><th>Score</th></tr></thead><tbody>${rows.map(c => `<tr><td>${c.name}</td><td>${c.region}</td><td>${formatNumber(c.risk_score,1)}</td></tr>`).join('') || '<tr><td colspan="3">No chokepoint data</td></tr>'}</tbody></table></div>`;
+    }
+    const energy = document.getElementById('geo-energy-panel');
+    if (energy) {
+      const e = data.energy || {};
+      energy.innerHTML = `<div class="card-header"><span class="card-title">Energy / Commodity Shock</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Oil</div><div class="metric-value red">${formatNumber(e.oil_shock_score,1)}</div></div><div class="metric-box"><div class="metric-label">Gas</div><div class="metric-value yellow">${formatNumber(e.natural_gas_shock_score,1)}</div></div><div class="metric-box"><div class="metric-label">Food/Fertilizer</div><div class="metric-value">${formatNumber(e.fertilizer_food_shock,1)}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Assets: ${(e.affected_assets || []).slice(0,12).join(', ')}</div>`;
+    }
+    const impact = document.getElementById('geo-impact-panel');
+    if (impact) {
+      const rows = (data.impact || data.marketImpact || {}).impacts || [];
+      impact.innerHTML = `<div class="card-header"><span class="card-title">Market Impact Table</span></div><div class="table-scroll"><table><thead><tr><th>Asset</th><th>Class</th><th>Impact</th><th>Direction</th><th>Action</th></tr></thead><tbody>${rows.slice(0,18).map(r => `<tr><td>${r.asset}</td><td>${r.asset_class}</td><td>${formatNumber(r.impact_score,1)}</td><td>${r.direction}</td><td>${r.suggested_risk_action}</td></tr>`).join('') || '<tr><td colspan="5">No impact data</td></tr>'}</tbody></table></div>`;
+    }
+    renderGeoScenarioResult(data.scenarioResult);
+    const prot = document.getElementById('geo-protection-panel');
+    if (prot) {
+      const p = data.protection || {};
+      prot.innerHTML = `<div class="card-header"><span class="card-title">Portfolio Protection Protocol</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Mode</div><div class="metric-value ${p.protection_mode === 'CRISIS' || p.protection_mode === 'DEFENSIVE' ? 'red' : 'green'}">${p.protection_mode || '--'}</div></div><div class="metric-box"><div class="metric-label">Auto Trade</div><div class="metric-value green">${p.auto_trade === false ? 'NO' : '--'}</div></div></div>${(p.recommended_actions || []).map(a => `<div style="font-size:12px;color:var(--text-muted);padding:2px 0">- ${a}</div>`).join('')}`;
+    }
+    const agent = document.getElementById('geo-agent-panel');
+    if (agent) {
+      const sigs = (data.agentSignals || {}).signals || [];
+      agent.innerHTML = `<div class="card-header"><span class="card-title">Geopolitical Agent Signals</span></div>${sigs.slice(0,8).map(s => `<div style="padding:8px;border-bottom:1px solid var(--border-color)"><span class="badge badge-blue">${s.signal}</span> <b>${s.agent}</b><div style="font-size:11px;color:var(--text-muted)">${s.reason}</div></div>`).join('') || '<div class="empty-state-text">No geopolitical signals</div>'}`;
+    }
+    const report = document.getElementById('geo-report-panel');
+    if (report) {
+      const r = data.dailyBrief || {};
+      report.innerHTML = `<div class="card-header"><span class="card-title">Daily Geopolitical Risk Brief</span></div><b>${r.headline || '--'}</b><div style="font-size:12px;color:var(--text-muted)">Regime: ${r.risk_regime || '--'} · Quality: ${r.data_quality || 'degraded'}</div>${(r.limitations || []).map(x => `<div style="font-size:11px;color:var(--text-muted)">• ${x}</div>`).join('')}`;
+    }
+  }
+
+  function renderGeoScenarioResult(data) {
+    const panel = document.getElementById('geo-scenario-result');
+    if (!panel || !data) return;
+    panel.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">PnL Impact</div><div class="metric-value red">${formatPrice(data.portfolio_pnl_impact)}</div></div><div class="metric-box"><div class="metric-label">Protection</div><div class="metric-value blue">${data.protection_mode || '--'}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Posture: ${data.suggested_risk_posture || '--'} · Hedges: ${(data.hedge_suggestions || []).join('; ')}</div>`;
+  }
+
+
   return {
     formatTimestamp,
     formatNumber,
@@ -1435,6 +1511,9 @@ const UI = (() => {
     renderScenarioResult,
     renderRiskIntelligence,
     renderAgentConsensusAndAttribution,
+
+    renderGeopoliticsTab,
+    renderGeoScenarioResult,
     renderEquitiesTab,
     renderStrategyPerformance,
     renderExecutionEnhancements,
