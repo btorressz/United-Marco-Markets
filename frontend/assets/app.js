@@ -21,6 +21,10 @@ const App = (() => {
     initStressTestForm();
     initMCForm();
     initBacktestForm();
+    initReplaySimForm();
+    initScenarioForm();
+    initGeoScenarioForm();
+    initEquityControls();
     initFeedStatusToggle();
     initAutoRefreshToggle();
     initTimeframeSelectors();
@@ -120,6 +124,8 @@ const App = (() => {
     window._fundingChart = Charts.createFundingChart('funding-chart');
     window._divergenceChart = Charts.createDivergenceChart('divergence-chart');
     window._mcChart = Charts.createMCChart('mc-chart');
+    window._equityChart = Charts.createEquityChart('equity-chart');
+    window._geoRiskChart = Charts.createGeoRiskChart('geo-risk-chart');
   }
 
   function initWebSocket() {
@@ -311,6 +317,8 @@ const App = (() => {
         case 'stablecoins': await refreshStablecoins(); break;
         case 'strategy': await refreshStrategy(); break;
         case 'execution': await refreshExecution(); break;
+        case 'equities': await refreshEquities(); break;
+        case 'geopolitics': await refreshGeopolitics(); break;
         case 'risk': await refreshRisk(); break;
         case 'agents': await refreshAgents(); break;
       }
@@ -321,12 +329,14 @@ const App = (() => {
 
   async function refreshIndex() {
     const tf = chartTimeframes.index || '7d';
-    const [latest, history, components, prediction, macroTerminal] = await Promise.allSettled([
+    const [latest, history, components, prediction, macroTerminal, macroEvents, macroImpact] = await Promise.allSettled([
       API.getIndexLatest(),
       API.getIndexHistory(tf),
       API.getIndexComponents(),
       API.getPrediction(),
       API.getMacroTerminal(),
+      API.getMacroEvents(),
+      API.getMacroEventsImpact(),
     ]);
     UI.renderIndexTab({
       latest: latest.status === 'fulfilled' ? latest.value : null,
@@ -335,6 +345,7 @@ const App = (() => {
       prediction: prediction.status === 'fulfilled' ? prediction.value : null,
       macroTerminal: macroTerminal.status === 'fulfilled' ? macroTerminal.value : null,
     });
+    if (macroEvents.status === 'fulfilled') UI.renderMacroEvents(macroEvents.value, macroImpact.status === 'fulfilled' ? macroImpact.value : null);
   }
 
   async function refreshMarkets() {
@@ -389,13 +400,14 @@ const App = (() => {
   }
 
   async function refreshStrategy() {
-    const [evaluation, status, adaptiveWeights, portfolio, allocation, mlPrediction] = await Promise.allSettled([
+    const [evaluation, status, adaptiveWeights, portfolio, allocation, mlPrediction, strategyPerformance] = await Promise.allSettled([
       API.getRulesEvaluation(),
       API.getRulesStatus(),
       API.getAdaptiveWeights(),
       API.getPortfolioProposal(),
       API.getAllocationLatest(),
       API.getMLPredictionLatest(),
+      API.getStrategyPerformance(),
     ]);
     UI.renderStrategyTab({
       evaluation: evaluation.status === 'fulfilled' ? evaluation.value : null,
@@ -405,16 +417,20 @@ const App = (() => {
       allocation: allocation.status === 'fulfilled' ? allocation.value : null,
       mlPrediction: mlPrediction.status === 'fulfilled' ? mlPrediction.value : null,
     });
+    if (strategyPerformance.status === 'fulfilled') UI.renderStrategyPerformance(strategyPerformance.value);
   }
 
   async function refreshExecution() {
-    const [positions, trades, eqi, integrity, health, indexData] = await Promise.allSettled([
+    const [positions, trades, eqi, integrity, health, indexData, preview, conditional, smart] = await Promise.allSettled([
       API.getPositions(),
       API.getPaperTrades(),
       API.getEQI(),
       API.getIntegrity(),
       API.getHealth(),
       API.getIndexLatest(),
+      API.postAllocationExecutionPreview({ venue: 'paper', market: 'SOL-PERP', side: 'buy', size: 1, price: 150 }),
+      API.getConditionalOrders(),
+      API.getSmartOrders(),
     ]);
     UI.renderDecisionDataPanel({
       integrity: integrity.status === 'fulfilled' ? integrity.value : null,
@@ -426,10 +442,152 @@ const App = (() => {
       trades: trades.status === 'fulfilled' ? trades.value : null,
       eqi: eqi.status === 'fulfilled' ? eqi.value : null,
     });
+    UI.renderExecutionEnhancements({ preview: preview.status === 'fulfilled' ? preview.value : null, conditional: conditional.status === 'fulfilled' ? conditional.value : null, smart: smart.status === 'fulfilled' ? smart.value : null });
+  }
+
+
+
+
+
+  function initReplaySimForm() {
+    const form = document.getElementById('replay-sim-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const result = await API.postReplayTradeSimulation({ scenario: form.scenario.value, initial_capital: parseFloat(form.initial_capital.value || '100000') });
+        UI.renderReplaySimulation(result);
+      } catch (err) {
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'replay_sim', ts: new Date().toISOString(), payload: { message: err.message } }, true);
+      }
+    });
+  }
+
+  function initEquityControls() {
+    const select = document.getElementById('equity-ticker-select');
+    if (select) select.addEventListener('change', () => refreshEquities());
+  }
+
+
+  function initScenarioForm() {
+    const form = document.getElementById('scenario-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const body = {
+          tariff_index_change: parseFloat(form.tariff_index_change.value || '0'),
+          gdelt_shock_change: parseFloat(form.gdelt_shock_change.value || '0'),
+          equity_drawdown: parseFloat(form.equity_drawdown.value || '0'),
+          crypto_drawdown: parseFloat(form.crypto_drawdown.value || '0'),
+        };
+        const result = await API.postScenarioRun(body);
+        UI.renderScenarioResult(result);
+      } catch (err) {
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'scenario', ts: new Date().toISOString(), payload: { message: err.message } }, true);
+      }
+    });
+  }
+
+
+  function initGeoScenarioForm() {
+    const form = document.getElementById('geo-scenario-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Running...';
+      }
+      try {
+        const fieldNumber = (name, fallback = '0') => parseFloat((form.elements[name] || {}).value || fallback);
+        const body = {
+          scenario_name: (form.elements.scenario_name || {}).value || 'Middle East escalation',
+          severity: fieldNumber('severity', '55'),
+          regions: ['Middle East', 'Asia-Pacific'],
+          affected_assets: ['SPY', 'QQQ', 'SMH', 'XLE', 'BTC', 'ETH'],
+          conflict_shock: fieldNumber('conflict_shock'),
+          energy_shock: fieldNumber('energy_shock'),
+          sanctions_shock: fieldNumber('sanctions_shock'),
+          shipping_shock: fieldNumber('shipping_shock'),
+          cyber_policy_shock: fieldNumber('cyber_policy_shock'),
+          stablecoin_stress: fieldNumber('stablecoin_stress'),
+          volatility_spike: fieldNumber('volatility_spike'),
+          liquidity_depth_drop: fieldNumber('liquidity_depth_drop'),
+        };
+        const result = await API.postGeopoliticalScenarioRun(body);
+        UI.renderGeoScenarioResult(result);
+      } catch (err) {
+        UI.addEventToTimeline({ event_type: 'ERROR', source: 'geopolitical_scenario', ts: new Date().toISOString(), payload: { message: err.message } }, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Run Geopolitical Scenario';
+        }
+      }
+    });
+  }
+
+  async function refreshEquities() {
+    const ticker = (document.getElementById('equity-ticker-select') || {}).value || 'SPY';
+    const [overview, history, risk, tariff, cross, quality, sensitivity, correlations, contagion, watchlists, dailyBrief, tariffReport] = await Promise.allSettled([
+      API.getEquitiesOverview(),
+      API.getEquityHistory(ticker),
+      API.getEquityRisk(),
+      API.getEquityTariffExposure(),
+      API.getEquityCrossAsset(),
+      API.getDataQuality(),
+      API.getMacroSensitivityAssets(),
+      API.getCrossAssetCorrelations(),
+      API.getCrossAssetContagion(),
+      API.getWatchlists(),
+      API.getDailyBriefReport(),
+      API.getTariffRiskReport(),
+    ]);
+    UI.renderEquitiesTab({
+      overview: overview.status === 'fulfilled' ? overview.value : null,
+      history: history.status === 'fulfilled' ? history.value : null,
+      risk: risk.status === 'fulfilled' ? risk.value : null,
+      tariff: tariff.status === 'fulfilled' ? tariff.value : null,
+      cross: cross.status === 'fulfilled' ? cross.value : null,
+      quality: quality.status === 'fulfilled' ? quality.value : null,
+    });
+    UI.renderInstitutionalLayer({ sensitivity: sensitivity.status === 'fulfilled' ? sensitivity.value : null, correlations: correlations.status === 'fulfilled' ? correlations.value : null, contagion: contagion.status === 'fulfilled' ? contagion.value : null, watchlists: watchlists.status === 'fulfilled' ? watchlists.value : null, dailyBrief: dailyBrief.status === 'fulfilled' ? dailyBrief.value : null, tariffReport: tariffReport.status === 'fulfilled' ? tariffReport.value : null });
+  }
+
+
+  async function refreshGeopolitics() {
+    const [index, events, sanctions, conflicts, chokepoints, energy, impact, protection, agentSignals, dailyBrief, protectionBrief] = await Promise.allSettled([
+      API.getGeopoliticalIndex(),
+      API.getGeopoliticalEvents(),
+      API.getGeopoliticalSanctions(),
+      API.getGeopoliticalConflicts(),
+      API.getGeopoliticalChokepoints(),
+      API.getGeopoliticalEnergyShock(),
+      API.getGeopoliticalMarketImpact(),
+      API.getProtectionStatus(),
+      API.getGeopoliticalAgentSignals(),
+      API.getGeopoliticalDailyBrief(),
+      API.getGeopoliticalProtectionBrief(),
+    ]);
+    UI.renderGeopoliticsTab({
+      index: index.status === 'fulfilled' ? index.value : null,
+      events: events.status === 'fulfilled' ? events.value : null,
+      sanctions: sanctions.status === 'fulfilled' ? sanctions.value : null,
+      conflicts: conflicts.status === 'fulfilled' ? conflicts.value : null,
+      chokepoints: chokepoints.status === 'fulfilled' ? chokepoints.value : null,
+      energy: energy.status === 'fulfilled' ? energy.value : null,
+      impact: impact.status === 'fulfilled' ? impact.value : null,
+      protection: protection.status === 'fulfilled' ? protection.value : null,
+      agentSignals: agentSignals.status === 'fulfilled' ? agentSignals.value : null,
+      dailyBrief: dailyBrief.status === 'fulfilled' ? dailyBrief.value : null,
+      protectionBrief: protectionBrief.status === 'fulfilled' ? protectionBrief.value : null,
+    });
   }
 
   async function refreshRisk() {
-    const [status, guardrails, heatmap, analogs, portfolioRisk, volRegime, volRecs] = await Promise.allSettled([
+    const [status, guardrails, heatmap, analogs, portfolioRisk, volRegime, volRecs, hedge, explain] = await Promise.allSettled([
       API.getRiskStatus(),
       API.getGuardrails(),
       API.getLiquidationHeatmap(),
@@ -437,6 +595,8 @@ const App = (() => {
       API.getPortfolioRiskSummary(),
       API.getVolRegime(),
       API.getVolRecommendations(),
+      API.getCrossAssetHedge(),
+      API.getPortfolioExplanation(),
     ]);
     UI.renderRiskTab({
       status: status.status === 'fulfilled' ? status.value : null,
@@ -447,17 +607,24 @@ const App = (() => {
       volRegime: volRegime.status === 'fulfilled' ? volRegime.value : null,
       volRecommendations: volRecs.status === 'fulfilled' ? volRecs.value : null,
     });
+    UI.renderRiskIntelligence({ hedge: hedge.status === 'fulfilled' ? hedge.value : null, explain: explain.status === 'fulfilled' ? explain.value : null });
   }
 
   async function refreshAgents() {
-    const [signals, registry] = await Promise.allSettled([
+    const [signals, registry, perf, hist, consensus, attribution] = await Promise.allSettled([
       API.getAgentSignals(),
       API.getAgentRegistry(),
+      API.getAgentsPerformance(),
+      API.getAgentsHistory(),
+      API.getAgentsConsensus(),
+      API.getSignalAttribution(),
     ]);
     UI.renderAgentsTab({
       signals: signals.status === 'fulfilled' ? signals.value : null,
       registry: registry.status === 'fulfilled' ? registry.value : null,
     });
+    UI.renderAgentMemory(perf.status === 'fulfilled' ? perf.value : null, hist.status === 'fulfilled' ? hist.value : null);
+    UI.renderAgentConsensusAndAttribution(consensus.status === 'fulfilled' ? consensus.value : null, attribution.status === 'fulfilled' ? attribution.value : null);
   }
 
   async function refreshHealth() {

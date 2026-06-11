@@ -168,3 +168,60 @@ Tables: `events`, `index_history`, `market_ticks`, `funding_ticks`, `positions`,
 - **LightGBM** (optional): ML training backend; heuristic fallback if unavailable.
 - **SHAP** (optional): ML explainability; skipped gracefully if unavailable.
 
+
+## 2026 Equity + Execution Safety Expansion
+
+This phase adds a proposal-only equities layer and strengthens paper-mode trading-desk controls without changing the core architecture. The backend remains FastAPI, the frontend remains vanilla HTML/CSS/JS with Chart.js, and paper mode remains the default.
+
+### Equity market features
+- New `/api/equities/*` router for overview, quotes, historical OHLCV, watchlists, risk signals, tariff exposure, sector rotation, and cross-asset risk.
+- yfinance is the primary MVP research-grade source, Stooq is an EOD fallback, and deterministic mock/demo equity data is always available when providers fail or dependencies are missing.
+- Equity analytics include daily/5D/1M return, realized volatility, max drawdown, moving averages, RSI, beta proxy, relative strength vs SPY, volume vs average volume, sector labels, provider status, and data timestamps.
+- The universe includes SPY, QQQ, DIA, IWM, major sector ETFs, semiconductor/defense/retail/China/EM ETFs, and tariff-sensitive single names across tech, retail, autos, machinery, aerospace, energy, copper, and steel.
+- New heuristic proposal-only agents cover equity risk, tariff exposure, and sector rotation with structured explainable signals.
+
+### Execution, allocation, replay, data quality, and memory upgrades
+- Allocation recommendations now feed a proposal-only pre-trade sizing preview at `POST /api/allocation/execution-preview`.
+- Paper-mode conditional order endpoints support stop loss, take profit, trailing stop, and bracket order records, with fail-open evaluation and no autonomous live trading.
+- Smart execution endpoints support TWAP/VWAP schedule generation, slice plans, estimated slippage, and status tracking in paper/proposal mode.
+- Strategy performance is exposed at `GET /api/strategy/performance` with PnL, Sharpe, drawdown, win rate, slippage, trade count, exposure placeholders, and allocator feedback.
+- Data quality is exposed at `GET /api/health/data-quality` across crypto, macro, and equity providers with freshness, fallback, degraded mode, confidence, and source-priority fields.
+- Replay trade simulation at `POST /api/replay/trade-simulation` produces simulated signals, allocation changes, paper trade decisions, final portfolio value, drawdown, and per-strategy PnL without executing trades.
+- Agent memory endpoints `GET /api/agents/performance` and `GET /api/agents/history` summarize deterministic signal history and outcome placeholders.
+
+### Frontend additions
+- A new **Equities** tab adds market overview cards, sector ETF table, tariff-sensitive watchlist, selected ticker Chart.js chart, tariff exposure panel, equity agent signals, cross-asset risk panel, and provider freshness badges.
+- Existing Strategy, Execution, Risk, and Agents tabs receive additive panels for strategy performance, allocation preview, advanced paper orders, replay simulation, data quality, and agent memory.
+
+## 2026 Institutional Intelligence Layer
+
+This phase adds an institutional-style macro intelligence layer on top of the equity/execution expansion while preserving the existing FastAPI + vanilla JS architecture and paper-mode defaults.
+
+### New institutional intelligence features
+- **Macro event calendar and impact tracker** via `/api/macro/events`, `/api/macro/events/impact`, and `/api/macro/events/{id}/reaction`, using WITS/GDELT snapshots when present and deterministic demo events when unavailable.
+- **Tariff beta and macro sensitivity** via `/api/macro-sensitivity/assets` and `/api/macro-sensitivity/{ticker}`, with transparent component scoring and degraded flags.
+- **Cross-asset correlation and contagion** via `/api/cross-asset/correlations` and `/api/cross-asset/contagion`, covering tariff shock, equity weakness, crypto risk-off, stablecoin stress, and semiconductor-to-QQQ pressure.
+- **Scenario builder** via `/api/scenario/templates` and `/api/scenario/run`, producing proposal-only PnL impact, agent signals, allocation changes, hedge recommendations, triggered conditional-order names, and execution warnings.
+- **Cross-asset hedging** via `/api/hedge/cross-asset` and `/api/hedge/preview`, extending hedge recommendations across equities, ETFs, crypto, stables, and cash.
+- **Portfolio explainability** via `/api/explain/portfolio` and `/api/explain/recommendation/{id}` with drivers, agent agreement, data freshness, confidence, invalidation conditions, and expected upside/downside.
+- **Agent consensus and signal attribution** via `/api/agents/consensus`, `/api/signals/outcomes`, and `/api/signals/attribution`.
+- **Watchlists and reports** via `/api/watchlists` and `/api/reports/*`, using in-memory fallback and JSON/copy-friendly report structures.
+
+### Safety notes
+All new outputs are deterministic, heuristic, explainable, and proposal-only. Missing WITS, GDELT, yfinance, Stooq, Redis, Postgres, or market data returns degraded but valid JSON. No React was added, paper mode remains the default, and live trading behavior is unchanged.
+
+### Institutional Layer Audit Status
+The institutional intelligence layer has been audited for routing, endpoint availability, frontend panel wiring, render safety, and fail-open behavior. Additional tests verify route uniqueness, safe JSON shapes, missing Stooq/WITS/GDELT/Redis/Postgres handling, empty datasets, and full-suite compatibility.
+
+## 2026 Geopolitical Risk Intelligence Layer
+
+This phase adds a proposal-only geopolitical risk layer that links sanctions, conflict escalation, shipping chokepoints, energy shocks, export controls, cyber/policy shocks, tariff pressure, stablecoin stress, and cross-asset risk-off behavior into a 0-100 Geopolitical Market Risk Index.
+
+### Geopolitical features
+- New `/api/geopolitical/*` endpoints expose the risk index, normalized geopolitical events, sanctions risk, conflict escalation, shipping/chokepoint risk, energy/commodity shock, market-impact estimates, geopolitical scenario templates/runs, and JSON risk briefs.
+- New `/api/protection/*` endpoints expose a Portfolio Protection Protocol that proposes defensive posture changes, hedges, stop/bracket-order suggestions, execution caution, and invalidation conditions without submitting trades.
+- New heuristic agents cover geopolitical risk, sanctions, conflict escalation, energy shock, and portfolio protection. Their signals are deterministic, explainable, and proposal-only, and they participate in the existing agent signal flow.
+- The new **Geopolitics** dashboard tab renders risk-index cards, component and regional breakdowns, event feeds, sanctions/conflict/shipping/energy panels, market-impact rows, scenario results, protection status, agent signals, and daily geopolitical risk briefs using vanilla JS and Chart.js.
+
+### Geopolitical safety notes
+Geopolitical and sanctions outputs are research/development aids only. They are not legal, financial, or investment advice. If GDELT, WITS, sanctions, equity, crypto, stablecoin, Redis, Postgres, or other providers are missing, endpoints return deterministic fallback/demo data with degraded data-quality markers. Paper mode remains the default, live trading behavior is unchanged, and no autonomous trading is added.

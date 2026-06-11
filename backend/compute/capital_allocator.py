@@ -191,3 +191,61 @@ def _estimate_confidence(
     score += vol_score
     score += exec_quality * 0.10
     return _clamp(score, 0.1, 0.95)
+
+
+def execution_preview(order: dict[str, Any], allocation: dict[str, Any] | None = None, portfolio: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Translate allocation weights into proposal-only pre-trade sizing constraints."""
+    allocation = allocation or allocate({})
+    portfolio = portfolio or {}
+    venue = str(order.get("venue", "hyperliquid")).lower()
+    market = str(order.get("market", "SOL-USD")).upper()
+    size = max(0.0, float(order.get("size") or 0.0))
+    price = max(0.0, float(order.get("price") or 0.0))
+    notional = size * price if price > 0 else size
+    equity = max(1.0, float(portfolio.get("portfolio_value", order.get("portfolio_value", 100000.0)) or 100000.0))
+    cash = max(0.0, float(portfolio.get("available_cash", order.get("available_cash", equity * allocation.get("weights", {}).get("cash", 0.10))) or 0.0))
+    current_exposure = float(portfolio.get("current_exposure", order.get("current_exposure", 0.0)) or 0.0)
+    venue_exposure = float((portfolio.get("venue_exposure", {}) or {}).get(venue, order.get("venue_exposure", 0.0)) or 0.0)
+    asset_exposure = float((portfolio.get("asset_exposure", {}) or {}).get(market, order.get("asset_exposure", 0.0)) or 0.0)
+    target_weight = float((allocation.get("weights", {}) or {}).get(venue, 0.0))
+    venue_cap = float((allocation.get("max_capital_per_venue", {}) or {}).get(venue, _MAX_CAPITAL_PER_VENUE.get(venue, 0.25)))
+    asset_cap = float(order.get("asset_cap", 0.20))
+    portfolio_risk_cap = float(order.get("portfolio_risk_cap", 0.85))
+    warnings: list[str] = []
+    candidates = {
+        "target_allocation_room": max(0.0, target_weight * equity - venue_exposure),
+        "venue_cap_room": max(0.0, venue_cap * equity - venue_exposure),
+        "asset_cap_room": max(0.0, asset_cap * equity - asset_exposure),
+        "portfolio_risk_room": max(0.0, portfolio_risk_cap * equity - current_exposure),
+        "available_cash": cash,
+    }
+    allowed_notional = min(candidates.values()) if candidates else 0.0
+    allowed_size = allowed_notional / price if price > 0 else allowed_notional
+    suggested_size = min(size, allowed_size)
+    blocked_reason = None
+    if size <= 0:
+        blocked_reason = "size must be positive"
+    elif suggested_size <= 0:
+        blocked_reason = "no allocation room available"
+    elif suggested_size < size:
+        warnings.append("Proposed size exceeds one or more allocation/risk caps; use suggested_size")
+    if allocation.get("confidence", 1.0) < 0.35:
+        warnings.append("Allocator confidence is low; preview is degraded")
+    return {
+        "preview": True,
+        "paper_mode_only": True,
+        "auto_trade": False,
+        "venue": venue,
+        "market": market,
+        "target_allocation": round(target_weight, 6),
+        "current_allocation": round(venue_exposure / equity, 6),
+        "proposed_notional": round(notional, 4),
+        "proposed_order_impact": round(notional / equity, 6),
+        "allowed_size": round(max(0.0, allowed_size), 8),
+        "suggested_size": round(max(0.0, suggested_size), 8),
+        "blocked_reason": blocked_reason,
+        "warnings": warnings,
+        "constraints": {k: round(v, 4) for k, v in candidates.items()},
+        "reasoning": ["checked target allocation, venue cap, asset cap, portfolio risk cap, available cash, and current exposure", "proposal-only preview; no order routed"],
+        "ts": datetime.now(timezone.utc).isoformat(),
+    }

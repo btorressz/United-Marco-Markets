@@ -390,3 +390,108 @@ All keys use `desk:` prefix with TTLs. State store also supports legacy `index:l
 | `funding_arb:latest` | 120s | Funding arb signal |
 | `basis:latest` | 120s | Basis spreads |
 | `stablecoin:health:latest` | 120s | Stablecoin health |
+
+## Equity + Execution Safety Expansion Map
+
+### New backend modules
+- `backend/ingest/yfinance_ingest.py` — optional yfinance MVP research-grade equity provider with deterministic demo fallback and equity universe constants.
+- `backend/ingest/stooq_ingest.py` — simple Stooq EOD CSV fallback, also fail-open to demo data.
+- `backend/compute/equity_analytics.py` — equity return, volatility, drawdown, moving average, RSI, beta proxy, relative strength, and volume analytics.
+- `backend/compute/equity_tariff_exposure.py` — transparent tariff exposure scoring using sector, supply-chain, import/export, WITS, GDELT, price reaction, volume, volatility, and relative weakness inputs.
+- `backend/agents/equity_risk_agent.py` — emits unusual volume, relative weakness, and risk-off equity signals.
+- `backend/agents/tariff_exposure_agent.py` — emits high tariff-risk equity signals from exposure scores.
+- `backend/agents/sector_rotation_agent.py` — emits sector rotation warnings from sector return clusters.
+- `backend/api/equities_routes.py` — registers all `/api/equities/*` endpoints.
+- `backend/api/strategy_routes.py` — adds `/api/strategy/performance`.
+
+### Extended backend modules
+- `main.py` now registers the equities and strategy routers.
+- `backend/compute/capital_allocator.py` now includes `execution_preview()` for proposal-only allocation-to-execution sizing checks.
+- `backend/api/allocation_routes.py` now exposes `POST /api/allocation/execution-preview`.
+- `backend/compute/smart_execution.py` now includes `create_smart_order()` for TWAP/VWAP schedules.
+- `backend/api/execution_routes.py` now exposes conditional paper orders and smart paper orders.
+- `backend/api/health_routes.py` now exposes `/api/health/data-quality`.
+- `backend/api/replay_routes.py` now exposes `/api/replay/trade-simulation`.
+- `backend/api/agents_routes.py` now exposes `/api/agents/performance` and `/api/agents/history`.
+- `backend/data/migrations.sql` now includes safe `conditional_orders` and `agent_signal_history` table creation.
+
+### Frontend additions
+- `frontend/index.html` adds the Equities tab and additive panels for strategy performance, replay simulation, allocation execution preview, advanced orders, and agent memory.
+- `frontend/assets/api.js` adds client helpers for equities, data quality, strategy performance, allocation preview, conditional orders, smart orders, replay simulation, and agent memory.
+- `frontend/assets/charts.js` adds a Chart.js equity line chart helper.
+- `frontend/assets/ui.js` adds renderers for the Equities tab and new Strategy/Execution/Agents panels.
+- `frontend/assets/app.js` orchestrates polling and form submission for the new panels without changing WebSocket behavior.
+
+### Tests
+- `tests/test_equities_features.py` validates yfinance fallback, equity analytics, tariff exposure scoring with and without WITS/GDELT, equity endpoint fail-open JSON responses, agent signal structure, data quality fail-open behavior, and allocation execution preview structure.
+
+## Institutional Intelligence Layer Map
+
+### New compute modules
+- `backend/compute/macro_events.py` — builds WITS/GDELT-aware macro/trade event timelines and market reaction estimates.
+- `backend/compute/macro_sensitivity.py` — tariff beta and macro sensitivity scoring with transparent components.
+- `backend/compute/cross_asset_intelligence.py` — correlation matrix and contagion path detection.
+- `backend/compute/scenario_engine.py` — custom scenario templates and proposal-only stress outputs.
+- `backend/compute/cross_asset_hedging.py` — cross-asset hedge recommendations across equities, ETFs, crypto, stables, and cash.
+- `backend/compute/portfolio_explainability.py` — portfolio/recommendation explanation payloads.
+- `backend/compute/agent_consensus.py` — confidence-weighted agent consensus.
+- `backend/compute/signal_attribution.py` — signal outcomes and attribution summary.
+- `backend/compute/watchlists.py` — user-defined watchlists with in-memory fallback.
+- `backend/compute/report_generator.py` — JSON report generator for institutional risk briefs.
+
+### New/extended API routes
+- `backend/api/macro_routes.py` — `/api/macro/events`, `/api/macro/events/impact`, `/api/macro/events/{id}/reaction`.
+- `backend/api/macro_sensitivity_routes.py` — `/api/macro-sensitivity/assets`, `/api/macro-sensitivity/{ticker}`.
+- `backend/api/cross_asset_routes.py` — `/api/cross-asset/correlations`, `/api/cross-asset/contagion`.
+- `backend/api/scenario_routes.py` — `/api/scenario/templates`, `/api/scenario/run`.
+- `backend/api/explain_routes.py` — `/api/explain/portfolio`, `/api/explain/recommendation/{id}`.
+- `backend/api/signals_routes.py` — `/api/signals/outcomes`, `/api/signals/attribution`.
+- `backend/api/watchlists_routes.py` — `/api/watchlists` CRUD with in-memory fallback.
+- `backend/api/reports_routes.py` — daily, tariff, portfolio, and agent report endpoints.
+- `backend/api/hedge_routes.py` — extended with `/api/hedge/cross-asset` and `/api/hedge/preview`.
+- `backend/api/agents_routes.py` — extended with `/api/agents/consensus`.
+- `main.py` registers all new routers without changing existing routes.
+
+### Frontend panels
+- Index tab: macro event calendar and market impact tracker.
+- Equities tab: tariff beta/macro sensitivity, cross-asset correlation/contagion, watchlists, and institutional reports.
+- Risk tab: scenario builder, cross-asset hedge recommendations, and portfolio explainability cards.
+- Agents tab: consensus and signal outcome attribution panels.
+
+### Tests
+- `tests/test_institutional_intelligence.py` covers new compute modules, safe default outputs, fail-open endpoint shapes, watchlist operations, report generation, consensus, attribution, hedges, and scenarios.
+
+## Institutional Intelligence Audit Notes
+
+- `tests/test_institutional_intelligence.py` now verifies route registration uniqueness, requested institutional endpoint availability, safe JSON response shapes, and fail-open behavior for missing providers/storage and empty datasets.
+- `frontend/assets/ui.js` institutional renderers now defensively default null inputs to empty objects and use safe report-copy payload attributes.
+- `backend/compute/backtester.py` now handles constant positive return streams as positive Sharpe instead of zero, matching portfolio-risk test expectations.
+
+## Geopolitical Risk Intelligence Layer
+
+### Backend compute modules
+- `backend/compute/geopolitical_risk.py` — 0-100 Geopolitical Market Risk Index, component weighting, regional/asset breakdowns, provider status, and normalized event feed construction.
+- `backend/compute/sanctions_risk.py` — sanctions/export-control risk scoring, fallback entity feed, and market impact mapping.
+- `backend/compute/conflict_escalation.py` — conflict hotspot scoring, normalized escalation events, and conflict market-impact rows.
+- `backend/compute/shipping_energy_risk.py` — chokepoint/shipping risk, supply-chain impact, and energy/commodity shock scoring.
+- `backend/compute/geopolitical_market_impact.py` — cross-asset impact estimates for equities, ETFs, commodities, crypto, and stablecoins.
+- `backend/compute/portfolio_protection.py` — proposal-only portfolio protection status and preview protocol.
+
+### Backend API routes
+- `backend/api/geopolitical_routes.py` — `/api/geopolitical/index`, `/events`, `/sanctions`, `/sanctions/impact`, `/sanctions/entities`, `/conflicts`, `/conflict/hotspots`, `/conflict/escalation`, `/conflict/market-impact`, `/chokepoints`, `/shipping-risk`, `/supply-chain-impact`, `/energy-shock`, `/commodity-impact`, `/market-impact`, `/scenario-templates`, `/scenario-run`, `/agents/signals`, `/reports/daily-brief`, and `/reports/protection-brief`.
+- `backend/api/protection_routes.py` — `/api/protection/status` and `/api/protection/preview`.
+- `main.py` registers both routers additively alongside existing institutional/equity routes.
+
+### Agents
+- `backend/agents/geopolitical_agent.py`, `backend/agents/sanctions_agent.py`, `backend/agents/conflict_agent.py`, `backend/agents/energy_shock_agent.py`, and `backend/agents/protection_agent.py` emit deterministic proposal-only signals with affected assets/regions and data-quality fields.
+- `backend/api/agents_routes.py` includes the new agents in the existing signal and registry flow.
+
+### Frontend
+- `frontend/index.html` adds a **Geopolitics** tab and panels for risk index, components, regional table, events, sanctions, conflict, shipping, energy, market impact, scenario builder, portfolio protection, agent signals, and reports.
+- `frontend/assets/api.js` adds fail-safe API wrappers for the geopolitical and protection endpoints.
+- `frontend/assets/ui.js` adds null-safe geopolitical renderers using existing card/table/badge patterns.
+- `frontend/assets/app.js` refreshes the Geopolitics tab and handles the geopolitical scenario form.
+- `frontend/assets/charts.js` adds a lightweight Chart.js component breakdown chart.
+
+### Tests
+- `tests/test_geopolitical_intelligence.py` covers index scoring, sanctions/conflict/shipping/energy engines, market impact, protection proposal safety, agent signal structure, endpoint response shapes, scenario output, fail-open payloads, and no autonomous trading.

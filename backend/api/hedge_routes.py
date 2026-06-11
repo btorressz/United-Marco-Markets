@@ -67,3 +67,22 @@ def get_correlations():
     except Exception as exc:
         logger.error("Correlation error: %s", exc, exc_info=True)
         return {"correlations": {}, "assets": [], "window": 30, "ts": datetime.now(timezone.utc).isoformat()}
+
+@router.get("/cross-asset")
+def get_cross_asset_hedges():
+    try:
+        from backend.compute.cross_asset_hedging import recommend_cross_asset_hedges
+        return recommend_cross_asset_hedges(_store.get_snapshot("portfolio:risk:latest") or {})
+    except Exception as exc:
+        logger.error("Cross-asset hedge error: %s", exc, exc_info=True)
+        return {"recommendations": [], "proposal_only": True, "auto_trade": False, "warnings": [str(exc)], "ts": datetime.now(timezone.utc).isoformat()}
+
+
+@router.post("/preview")
+def preview_cross_asset_hedges(body: dict | None = None):
+    try:
+        from backend.compute.cross_asset_hedging import recommend_cross_asset_hedges
+        return recommend_cross_asset_hedges(body or {})
+    except Exception as exc:
+        logger.error("Cross-asset hedge preview error: %s", exc, exc_info=True)
+        return {"recommendations": [], "proposal_only": True, "auto_trade": False, "warnings": [str(exc)], "ts": datetime.now(timezone.utc).isoformat()}

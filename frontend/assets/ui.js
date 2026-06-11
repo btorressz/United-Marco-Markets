@@ -1236,6 +1236,252 @@ const UI = (() => {
     `;
   }
 
+
+
+  function renderMacroEvents(data, impact) {
+    const panel = document.getElementById('macro-events-panel');
+    if (!panel) return;
+    const events = (data || {}).events || [];
+    const summary = (impact || {}).summary || {};
+    panel.innerHTML = `<div class="card-header"><span class="card-title">Macro/Trade Timeline</span><span class="badge ${data && data.degraded ? 'badge-yellow' : 'badge-green'}">${data && data.degraded ? 'DEGRADED' : 'LIVE'}</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Events</div><div class="metric-value blue">${events.length}</div></div><div class="metric-box"><div class="metric-label">Risk Bias</div><div class="metric-value ${summary.risk_bias === 'risk_off' ? 'red' : 'green'}">${summary.risk_bias || '--'}</div></div><div class="metric-box"><div class="metric-label">Avg SPY Reaction</div><div class="metric-value">${((summary.avg_spy_reaction || 0) * 100).toFixed(2)}%</div></div></div><div class="table-scroll"><table><thead><tr><th>Time</th><th>Type</th><th>Title</th><th>Severity</th><th>Source</th></tr></thead><tbody>${events.slice(0,8).map(e => `<tr><td>${formatTimestamp(e.ts)}</td><td>${e.type}</td><td>${e.title}</td><td><span class="badge ${e.severity === 'high' ? 'badge-red' : e.severity === 'medium' ? 'badge-yellow' : 'badge-green'}">${e.severity}</span></td><td>${e.source}</td></tr>`).join('') || '<tr><td colspan="5">No macro events</td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderInstitutionalLayer(data) {
+    data = data || {};
+    const sensitivity = document.getElementById('macro-sensitivity-panel');
+    if (sensitivity) {
+      const rows = ((data.sensitivity || {}).assets || []).slice(0, 10);
+      sensitivity.innerHTML = `<div class="card-header"><span class="card-title">Tariff Beta / Macro Sensitivity</span></div><div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Beta</th><th>Score</th><th>Reason</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.ticker}</td><td>${formatNumber(r.tariff_beta, 2)}</td><td>${formatNumber(r.macro_sensitivity_score, 1)}</td><td style="font-size:11px;color:var(--text-muted)">${(r.reasoning || []).slice(0,1).join('')}</td></tr>`).join('') || '<tr><td colspan="4">No sensitivity data</td></tr>'}</tbody></table></div>`;
+    }
+    const corr = document.getElementById('cross-asset-correlation-panel');
+    if (corr) {
+      const matrix = (data.correlations || {}).matrix || [];
+      const contagion = data.contagion || {};
+      corr.innerHTML = `<div class="card-header"><span class="card-title">Correlation / Contagion Map</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Contagion</div><div class="metric-value ${contagion.regime === 'contagion' ? 'red' : 'yellow'}">${contagion.regime || '--'}</div></div><div class="metric-box"><div class="metric-label">Score</div><div class="metric-value blue">${formatNumber(contagion.contagion_score, 1)}</div></div></div><div class="table-scroll"><table><thead><tr><th>Asset</th><th>Tariff</th><th>SPY</th><th>BTC</th><th>Stable</th></tr></thead><tbody>${matrix.slice(0,8).map(r => `<tr><td>${r.asset}</td><td>${formatNumber(r.tariff_index,2)}</td><td>${formatNumber(r.SPY,2)}</td><td>${formatNumber(r.BTC,2)}</td><td>${formatNumber(r.stablecoin_stress,2)}</td></tr>`).join('') || '<tr><td colspan="5">No correlation data</td></tr>'}</tbody></table></div>`;
+    }
+    const watch = document.getElementById('watchlist-builder-panel');
+    if (watch) {
+      const rows = (data.watchlists || {}).watchlists || [];
+      watch.innerHTML = `<div class="card-header"><span class="card-title">Watchlist Builder</span></div><div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">In-memory fallback active when DB is unavailable.</div>${rows.slice(0,8).map(w => `<div style="padding:6px;border-bottom:1px solid var(--border-color)"><b>${w.name}</b> <span style="font-size:11px;color:var(--text-muted)">${(w.assets || []).join(', ')}</span></div>`).join('')}`;
+    }
+    const reports = document.getElementById('institutional-reports-panel');
+    if (reports) {
+      const reps = [data.dailyBrief, data.tariffReport].filter(Boolean);
+      reports.innerHTML = `<div class="card-header"><span class="card-title">Institutional Reports</span></div>${reps.map(r => { const payload = escapeAttr(JSON.stringify(r)); return `<div style="padding:8px;border-bottom:1px solid var(--border-color)"><b>${r.title}</b><button class="btn btn-secondary" style="float:right" data-report='${payload}' onclick="navigator.clipboard && navigator.clipboard.writeText(this.dataset.report || '')">Copy</button><div style="font-size:11px;color:var(--text-muted)">${(r.sections || []).map(s => s.title).join(' · ')}</div></div>`; }).join('') || '<div class="empty-state-text">No reports</div>'}`;
+    }
+  }
+
+  function renderScenarioResult(data) {
+    const panel = document.getElementById('scenario-result-panel');
+    if (!panel || !data) return;
+    panel.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">PnL Impact</div><div class="metric-value ${Number(data.portfolio_pnl_impact || 0) >= 0 ? 'green' : 'red'}">${formatPrice(data.portfolio_pnl_impact)}</div></div><div class="metric-box"><div class="metric-label">Triggered</div><div class="metric-value blue">${(data.conditional_orders_triggered || []).length}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Hedges: ${(data.hedge_recommendations || []).join('; ')}</div>`;
+  }
+
+  function renderRiskIntelligence(data) {
+    data = data || {};
+    const hedge = document.getElementById('cross-asset-hedge-panel');
+    if (hedge) {
+      const rows = (data.hedge || {}).recommendations || [];
+      hedge.innerHTML = `<div class="card-header"><span class="card-title">Cross-Asset Hedge Recommendations</span></div>${rows.map(r => `<div style="padding:8px;border-bottom:1px solid var(--border-color)"><span class="badge badge-blue">${r.action}</span> <b>${r.asset}</b><div style="font-size:11px;color:var(--text-muted)">${r.reason}</div></div>`).join('') || '<div class="empty-state-text">No hedge recommendations</div>'}`;
+    }
+    const exp = document.getElementById('portfolio-explain-panel');
+    if (exp) {
+      const e = data.explain || {};
+      exp.innerHTML = `<div class="card-header"><span class="card-title">Portfolio Explainability</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Confidence</div><div class="metric-value blue">${(Number(e.confidence || 0) * 100).toFixed(0)}%</div></div><div class="metric-box"><div class="metric-label">Expected Upside</div><div class="metric-value green">${(Number(e.expected_upside || 0) * 100).toFixed(2)}%</div></div><div class="metric-box"><div class="metric-label">Expected Downside</div><div class="metric-value red">${(Number(e.expected_downside || 0) * 100).toFixed(2)}%</div></div></div><div style="font-size:12px;color:var(--text-muted)">Drivers: ${(e.drivers || []).join('; ')}</div><div style="font-size:12px;color:var(--text-muted)">Invalidation: ${(e.invalidation_conditions || []).join('; ')}</div>`;
+    }
+  }
+
+  function renderAgentConsensusAndAttribution(consensus, attribution) {
+    const cp = document.getElementById('agent-consensus-panel');
+    if (cp) {
+      const c = consensus || {};
+      cp.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">Consensus</div><div class="metric-value ${c.confidence_weighted_consensus === 'bearish' ? 'red' : c.confidence_weighted_consensus === 'bullish' ? 'green' : 'yellow'}">${c.confidence_weighted_consensus || '--'}</div></div><div class="metric-box"><div class="metric-label">Risk Score</div><div class="metric-value blue">${formatNumber(c.risk_on_risk_off_score, 1)}</div></div><div class="metric-box"><div class="metric-label">Disagreement</div><div class="metric-value">${(Number(c.disagreement_level || 0) * 100).toFixed(0)}%</div></div></div><div style="font-size:12px;color:var(--text-muted)">Action: ${c.proposed_action || '--'} · Agents: ${(c.top_agreeing_agents || []).join(', ')}</div>`;
+    }
+    const ap = document.getElementById('signal-attribution-panel');
+    if (ap) {
+      const a = attribution || {};
+      ap.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">Hit Rate</div><div class="metric-value green">${(Number(a.hit_rate || 0) * 100).toFixed(0)}%</div></div><div class="metric-box"><div class="metric-label">Signals</div><div class="metric-value blue">${a.signal_count || 0}</div></div><div class="metric-box"><div class="metric-label">PnL Impact</div><div class="metric-value ${Number(a.pnl_impact || 0) >= 0 ? 'green' : 'red'}">${formatPrice(a.pnl_impact)}</div></div></div>`;
+    }
+  }
+
+  function escapeAttr(v) {
+    return String(v || '').replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function pctBadge(v) {
+    const n = Number(v || 0);
+    const cls = n >= 0 ? 'badge-green' : 'badge-red';
+    return `<span class="badge ${cls}">${(n * 100).toFixed(2)}%</span>`;
+  }
+
+
+  function renderStrategyPerformance(data) {
+    data = data || {};
+    const panel = document.getElementById('strategy-performance-panel');
+    if (!panel) return;
+    const rows = Object.values((data || {}).strategies || {});
+    panel.innerHTML = `<div class="card-header"><span class="card-title">Strategy Comparison</span></div><div class="metric-row">${rows.slice(0,4).map(r => `<div class="metric-box"><div class="metric-label">${r.strategy_id}</div><div class="metric-value ${Number(r.total_pnl || 0) >= 0 ? 'green' : 'red'}">${formatPrice(r.total_pnl || 0)}</div><div style="font-size:11px;color:var(--text-muted)">Sharpe ${formatNumber(r.sharpe, 2)} · DD ${(Number(r.max_drawdown || 0) * 100).toFixed(1)}% · Win ${(Number(r.win_rate || 0) * 100).toFixed(0)}%</div></div>`).join('')}</div><div class="table-scroll"><table><thead><tr><th>Strategy</th><th>PnL</th><th>Sharpe</th><th>Max DD</th><th>Win</th><th>Trades</th><th>Avg Slip</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.strategy_id}</td><td>${formatPrice(r.total_pnl)}</td><td>${formatNumber(r.sharpe, 2)}</td><td>${(Number(r.max_drawdown || 0) * 100).toFixed(1)}%</td><td>${(Number(r.win_rate || 0) * 100).toFixed(0)}%</td><td>${r.trade_count}</td><td>${formatNumber(r.avg_slippage_bps, 1)} bps</td></tr>`).join('') || '<tr><td colspan="7">No strategy data</td></tr>'}</tbody></table></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">Best: ${(data.summary || {}).best_strategy || '--'} · Worst: ${(data.summary || {}).worst_strategy || '--'} · ${data.capital_allocation_feedback || ''}</div>`;
+  }
+
+  function renderExecutionEnhancements(data) {
+    data = data || {};
+    const preview = document.getElementById('allocation-preview-panel');
+    if (preview) {
+      const p = data.preview || {};
+      preview.innerHTML = `<div class="card-header"><span class="card-title">Pre-Trade Sizing Preview</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Target Allocation</div><div class="metric-value blue">${(Number(p.target_allocation || 0) * 100).toFixed(1)}%</div></div><div class="metric-box"><div class="metric-label">Current Allocation</div><div class="metric-value">${(Number(p.current_allocation || 0) * 100).toFixed(1)}%</div></div><div class="metric-box"><div class="metric-label">Allowed Size</div><div class="metric-value green">${formatNumber(p.allowed_size, 4)}</div></div></div>${(p.warnings || []).map(w => `<div class="badge badge-yellow" style="margin:2px">${w}</div>`).join('')}<div style="font-size:12px;color:var(--text-muted);margin-top:6px">${(p.reasoning || []).join('; ') || 'No preview yet'}</div>`;
+    }
+    const adv = document.getElementById('advanced-orders-panel');
+    if (adv) {
+      const cond = (data.conditional || {}).orders || [];
+      const smart = (data.smart || {}).orders || [];
+      adv.innerHTML = `<div class="card-header"><span class="card-title">Advanced Paper Orders</span></div><div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Stop loss, take profit, trailing stop, bracket, TWAP and VWAP are paper-mode/proposal-safe.</div><b>Conditional Orders</b><div class="table-scroll"><table><thead><tr><th>ID</th><th>Market</th><th>Type</th><th>Status</th><th>Trigger</th><th>Parent</th></tr></thead><tbody>${cond.slice(0,5).map(o => `<tr><td>${String(o.id || '').slice(0,8)}</td><td>${o.market}</td><td>${o.order_type}</td><td>${o.status}</td><td>${formatNumber(o.current_trigger_level || o.trigger_price, 2)}</td><td>${o.parent_id ? String(o.parent_id).slice(0,8) : '--'}</td></tr>`).join('') || '<tr><td colspan="6">No active conditional orders</td></tr>'}</tbody></table></div><b>Smart Orders</b><div class="table-scroll"><table><thead><tr><th>ID</th><th>Mode</th><th>Market</th><th>Progress</th><th>Est Slip</th><th>Status</th></tr></thead><tbody>${smart.slice(0,5).map(o => `<tr><td>${String(o.exec_id || '').slice(0,8)}</td><td>${o.mode || o.execution_style}</td><td>${o.market}</td><td>${o.completed_slices || 0}/${o.n_slices || 0}</td><td>${formatNumber(o.estimated_slippage_bps, 1)} bps</td><td>${o.status}</td></tr>`).join('') || '<tr><td colspan="6">No smart orders</td></tr>'}</tbody></table></div>`;
+    }
+  }
+
+  function renderReplaySimulation(data) {
+    const panel = document.getElementById('replay-sim-panel');
+    if (!panel || !data) return;
+    const timeline = data.simulated_timeline || [];
+    panel.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">Final Value</div><div class="metric-value green">${formatPrice(data.final_portfolio_value)}</div></div><div class="metric-box"><div class="metric-label">Max Drawdown</div><div class="metric-value red">${(Number(data.max_drawdown || 0) * 100).toFixed(1)}%</div></div></div><div class="table-scroll"><table><thead><tr><th>Step</th><th>Value</th><th>Actions</th><th>Decision</th></tr></thead><tbody>${timeline.slice(-8).map(t => `<tr><td>${t.step}</td><td>${formatPrice(t.portfolio_value)}</td><td>${(t.proposed_actions || []).join(', ')}</td><td>${t.decision_log}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  function renderAgentMemory(perf, hist) {
+    const p = document.getElementById('agent-performance-panel');
+    if (p) {
+      const rows = (perf || {}).agents || [];
+      p.innerHTML = `<div class="metric-row">${rows.map(r => `<div class="metric-box"><div class="metric-label">${r.agent}</div><div class="metric-value blue">${(Number(r.hit_rate || 0) * 100).toFixed(0)}%</div><div style="font-size:11px;color:var(--text-muted)">${r.signal_count} signals · conf ${(Number(r.average_confidence || 0) * 100).toFixed(0)}%</div></div>`).join('') || '<div class="empty-state-text">No memory records yet</div>'}</div>`;
+    }
+    const h = document.getElementById('agent-history-panel');
+    if (h) {
+      const rows = (hist || {}).history || [];
+      h.innerHTML = `<div class="table-scroll"><table><thead><tr><th>Agent</th><th>Ticker</th><th>Signal</th><th>Conf</th><th>Outcome</th></tr></thead><tbody>${rows.slice(0,25).map(r => `<tr><td>${r.agent}</td><td>${r.ticker || '--'}</td><td>${r.signal}</td><td>${(Number(r.confidence || 0) * 100).toFixed(0)}%</td><td>${formatNumber(r.realized_outcome, 4)}</td></tr>`).join('') || '<tr><td colspan="5">No signal history</td></tr>'}</tbody></table></div>`;
+    }
+  }
+
+  function renderEquitiesTab(data) {
+    data = data || {};
+    const overview = data.overview || {};
+    const cards = document.getElementById('equity-overview-cards');
+    if (cards) {
+      const rows = overview.market_overview || [];
+      cards.innerHTML = rows.map(r => `<div class="metric-box"><div class="metric-label">${r.ticker}</div><div class="metric-value ${Number(r.daily_return || 0) >= 0 ? 'green' : 'red'}">${formatPrice(r.price)}</div><div style="font-size:11px;color:var(--text-muted)">1D ${(Number(r.daily_return || 0) * 100).toFixed(2)}% · Vol ${(Number(r.realized_volatility || 0) * 100).toFixed(1)}%</div></div>`).join('') || '<div class="empty-state-text">No equity overview data</div>';
+    }
+    const sectorBody = document.getElementById('equity-sector-tbody');
+    if (sectorBody) {
+      const rows = overview.sector_etfs || [];
+      sectorBody.innerHTML = rows.map(r => `<tr><td>${r.ticker}</td><td>${r.sector || '--'}</td><td>${pctBadge(r.return_5d)}</td><td>${(Number(r.realized_volatility || 0) * 100).toFixed(1)}%</td><td>${pctBadge(r.relative_strength_vs_spy)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty-state-text">No sector data</td></tr>';
+    }
+    const watchBody = document.getElementById('equity-watchlist-tbody');
+    if (watchBody) {
+      const rows = overview.tariff_watchlist || [];
+      watchBody.innerHTML = rows.map(r => `<tr><td>${r.ticker}</td><td>${r.sector || '--'}</td><td>${formatPrice(r.price)}</td><td>${pctBadge(r.return_1m)}</td><td>${formatNumber(r.volume_vs_avg, 2)}x</td></tr>`).join('') || '<tr><td colspan="5" class="empty-state-text">No watchlist data</td></tr>';
+    }
+    const provider = document.getElementById('equity-provider-badge');
+    if (provider) {
+      const degraded = overview.status !== 'ok';
+      provider.className = `freshness-badge ${degraded ? 'stale' : 'fresh'}`;
+      provider.innerHTML = `<span class="freshness-dot"></span> ${degraded ? 'DEGRADED FALLBACK' : 'FRESH'}`;
+    }
+    if (data.history && window._equityChart && typeof Charts !== 'undefined') {
+      const hist = data.history.history || [];
+      Charts.updateChart(window._equityChart, { labels: hist.map(x => formatTimestamp(x.ts).slice(0, 10)), datasets: [{ label: `${data.history.ticker || 'SPY'} Close`, data: hist.map(x => x.close) }] });
+    }
+    const tariffPanel = document.getElementById('equity-tariff-panel');
+    if (tariffPanel) {
+      const scores = (data.tariff || {}).scores || [];
+      tariffPanel.innerHTML = `<div class="card-header"><span class="card-title">Equity Tariff Exposure</span></div>${((data.tariff || {}).warnings || []).map(w => `<div class="badge badge-yellow" style="margin:2px">${w}</div>`).join('')}<div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Score</th><th>Severity</th><th>Reasoning</th></tr></thead><tbody>${scores.slice(0, 12).map(s => `<tr><td>${s.ticker}</td><td>${formatNumber(s.score, 1)}</td><td><span class="badge ${s.severity === 'high' ? 'badge-red' : s.severity === 'medium' ? 'badge-yellow' : 'badge-green'}">${s.severity}</span></td><td style="font-size:11px;color:var(--text-muted)">${(s.reasoning || []).slice(0,2).join('; ')}</td></tr>`).join('') || '<tr><td colspan="4">No exposure scores</td></tr>'}</tbody></table></div>`;
+    }
+    const agentPanel = document.getElementById('equity-agent-panel');
+    if (agentPanel) {
+      const sigs = (data.risk || {}).signals || [];
+      agentPanel.innerHTML = `<div class="card-header"><span class="card-title">Equity Risk Agent Signals</span></div>${sigs.slice(0, 10).map(s => `<div style="padding:8px;border-bottom:1px solid var(--border-color)"><span class="badge badge-blue">${s.signal}</span> <b>${s.ticker}</b> <span style="color:var(--text-muted);font-size:12px">${s.reason}</span></div>`).join('') || '<div class="empty-state-text">No active equity signals</div>'}`;
+    }
+    const cross = document.getElementById('equity-cross-asset-panel');
+    if (cross) {
+      const c = data.cross || {};
+      cross.innerHTML = `<div class="card-header"><span class="card-title">Cross-Asset Risk On/Off</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Regime</div><div class="metric-value ${c.regime === 'risk_off' ? 'red' : 'green'}">${c.regime || '--'}</div></div><div class="metric-box"><div class="metric-label">Risk-On Score</div><div class="metric-value blue">${formatNumber(c.risk_on_off_score, 1)}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Equity vol ${(Number(c.equity_volatility || 0) * 100).toFixed(1)}% vs crypto proxy ${(Number(c.crypto_volatility_proxy || 0) * 100).toFixed(1)}%; tariff index ${formatNumber(c.tariff_index, 1)}</div>`;
+    }
+    const dq = document.getElementById('data-quality-panel');
+    if (dq) {
+      const sources = (data.quality || {}).sources || [];
+      dq.innerHTML = `<div class="card-header"><span class="card-title">Data Quality Dashboard</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">${sources.map(s => `<div class="metric-box"><div class="metric-label">${s.name}</div><div><span class="badge ${s.status === 'ok' ? 'badge-green' : 'badge-yellow'}">${s.status}</span></div><div style="font-size:11px;color:var(--text-muted)">confidence ${(Number(s.confidence_score || 0) * 100).toFixed(0)}% · fallback ${s.fallback_source || '--'}</div></div>`).join('')}</div>`;
+    }
+  }
+
+
+  function renderGeopoliticsTab(data) {
+    data = data || {};
+    const idx = data.index || {};
+    const components = [
+      ['Sanctions', idx.sanctions_score], ['Conflict', idx.conflict_score], ['Shipping', idx.shipping_score], ['Energy', idx.energy_score], ['Cyber/Policy', idx.cyber_policy_score], ['Tariff', idx.tariff_score], ['Market Stress', idx.market_stress_score],
+    ];
+    const cards = document.getElementById('geo-risk-cards');
+    if (cards) {
+      const regimeCls = idx.regime === 'crisis' || idx.regime === 'high_risk' ? 'red' : idx.regime === 'elevated' ? 'yellow' : 'green';
+      cards.innerHTML = `<div class="metric-box"><div class="metric-label">Geo Risk Index</div><div class="metric-value ${regimeCls}">${formatNumber(idx.overall_score,1)}</div></div><div class="metric-box"><div class="metric-label">Regime</div><div class="metric-value ${regimeCls}">${idx.regime || '--'}</div></div><div class="metric-box"><div class="metric-label">Confidence</div><div class="metric-value blue">${(Number(idx.confidence || 0) * 100).toFixed(0)}%</div></div><div class="metric-box"><div class="metric-label">Data Quality</div><div><span class="badge ${(idx.data_quality === 'ok' || idx.data_quality === 'healthy') ? 'badge-green' : 'badge-yellow'}">${idx.data_quality || 'degraded'}</span></div></div>`;
+    }
+    const comp = document.getElementById('geo-component-panel');
+    if (comp) comp.innerHTML = `<div class="table-scroll"><table><thead><tr><th>Component</th><th>Score</th></tr></thead><tbody>${components.map(c => `<tr><td>${c[0]}</td><td>${formatNumber(c[1],1)}</td></tr>`).join('')}</tbody></table></div>`;
+    if (window._geoRiskChart && typeof Charts !== 'undefined') Charts.updateChart(window._geoRiskChart, { labels: components.map(c => c[0]), datasets: [{ data: components.map(c => Number(c[1] || 0)) }] });
+    const regional = document.getElementById('geo-regional-panel');
+    if (regional) {
+      const rows = Object.entries(idx.regional_breakdown || {});
+      regional.innerHTML = `<div class="card-header"><span class="card-title">Regional Risk Table</span></div><div class="table-scroll"><table><thead><tr><th>Region</th><th>Risk</th></tr></thead><tbody>${rows.map(([k,v]) => `<tr><td>${k}</td><td>${formatNumber(v,1)}</td></tr>`).join('') || '<tr><td colspan="2">No regional data</td></tr>'}</tbody></table></div>`;
+    }
+    const events = document.getElementById('geo-events-panel');
+    if (events) {
+      const rows = (data.events || {}).events || [];
+      events.innerHTML = `<div class="card-header"><span class="card-title">Geopolitical Events Feed</span></div><div class="table-scroll"><table><thead><tr><th>Type</th><th>Title</th><th>Region</th><th>Severity</th></tr></thead><tbody>${rows.slice(0,10).map(e => `<tr><td>${e.event_type}</td><td>${e.title}</td><td>${e.region}</td><td><span class="badge ${e.severity === 'critical' || e.severity === 'crisis' || e.severity === 'high' ? 'badge-red' : 'badge-yellow'}">${e.severity}</span></td></tr>`).join('') || '<tr><td colspan="4">No events</td></tr>'}</tbody></table></div>`;
+    }
+    const sanctions = document.getElementById('geo-sanctions-panel');
+    if (sanctions) {
+      const s = data.sanctions || {}; const programs = s.programs || [];
+      sanctions.innerHTML = `<div class="card-header"><span class="card-title">Sanctions Monitor</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Score</div><div class="metric-value red">${formatNumber(s.sanctions_score,1)}</div></div><div class="metric-box"><div class="metric-label">Quality</div><span class="badge ${s.data_quality === 'ok' ? 'badge-green' : 'badge-yellow'}">${s.data_quality || 'degraded'}</span></div></div>${programs.slice(0,5).map(p => `<div style="padding:6px;border-bottom:1px solid var(--border-color)"><b>${p.program}</b> <span style="font-size:11px;color:var(--text-muted)">${(p.affected_assets || []).join(', ')}</span></div>`).join('')}`;
+    }
+    const conflict = document.getElementById('geo-conflict-panel');
+    if (conflict) {
+      const c = data.conflicts || {}; const rows = c.hotspots || [];
+      conflict.innerHTML = `<div class="card-header"><span class="card-title">Conflict / Escalation Monitor</span></div><div class="table-scroll"><table><thead><tr><th>Hotspot</th><th>Score</th><th>Assets</th></tr></thead><tbody>${rows.slice(0,6).map(h => `<tr><td>${h.region}</td><td>${formatNumber(h.risk_score,1)}</td><td>${(h.assets || []).slice(0,4).join(', ')}</td></tr>`).join('') || '<tr><td colspan="3">No hotspots</td></tr>'}</tbody></table></div>`;
+    }
+    const shipping = document.getElementById('geo-shipping-panel');
+    if (shipping) {
+      const rows = (data.chokepoints || {}).chokepoints || [];
+      shipping.innerHTML = `<div class="card-header"><span class="card-title">Shipping / Chokepoint Risk</span></div><div class="table-scroll"><table><thead><tr><th>Chokepoint</th><th>Region</th><th>Score</th></tr></thead><tbody>${rows.map(c => `<tr><td>${c.name}</td><td>${c.region}</td><td>${formatNumber(c.risk_score,1)}</td></tr>`).join('') || '<tr><td colspan="3">No chokepoint data</td></tr>'}</tbody></table></div>`;
+    }
+    const energy = document.getElementById('geo-energy-panel');
+    if (energy) {
+      const e = data.energy || {};
+      energy.innerHTML = `<div class="card-header"><span class="card-title">Energy / Commodity Shock</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Oil</div><div class="metric-value red">${formatNumber(e.oil_shock_score,1)}</div></div><div class="metric-box"><div class="metric-label">Gas</div><div class="metric-value yellow">${formatNumber(e.natural_gas_shock_score,1)}</div></div><div class="metric-box"><div class="metric-label">Food/Fertilizer</div><div class="metric-value">${formatNumber(e.fertilizer_food_shock,1)}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Assets: ${(e.affected_assets || []).slice(0,12).join(', ')}</div>`;
+    }
+    const impact = document.getElementById('geo-impact-panel');
+    if (impact) {
+      const rows = (data.impact || data.marketImpact || {}).impacts || [];
+      impact.innerHTML = `<div class="card-header"><span class="card-title">Market Impact Table</span></div><div class="table-scroll"><table><thead><tr><th>Asset</th><th>Class</th><th>Impact</th><th>Direction</th><th>Action</th></tr></thead><tbody>${rows.slice(0,18).map(r => `<tr><td>${r.asset}</td><td>${r.asset_class}</td><td>${formatNumber(r.impact_score,1)}</td><td>${r.direction}</td><td>${r.suggested_risk_action}</td></tr>`).join('') || '<tr><td colspan="5">No impact data</td></tr>'}</tbody></table></div>`;
+    }
+    renderGeoScenarioResult(data.scenarioResult);
+    const prot = document.getElementById('geo-protection-panel');
+    if (prot) {
+      const p = data.protection || {};
+      prot.innerHTML = `<div class="card-header"><span class="card-title">Portfolio Protection Protocol</span></div><div class="metric-row"><div class="metric-box"><div class="metric-label">Mode</div><div class="metric-value ${p.protection_mode === 'CRISIS' || p.protection_mode === 'DEFENSIVE' ? 'red' : 'green'}">${p.protection_mode || '--'}</div></div><div class="metric-box"><div class="metric-label">Auto Trade</div><div class="metric-value green">${p.auto_trade === false ? 'NO' : '--'}</div></div></div>${(p.recommended_actions || []).map(a => `<div style="font-size:12px;color:var(--text-muted);padding:2px 0">- ${a}</div>`).join('')}`;
+    }
+    const agent = document.getElementById('geo-agent-panel');
+    if (agent) {
+      const sigs = (data.agentSignals || {}).signals || [];
+      agent.innerHTML = `<div class="card-header"><span class="card-title">Geopolitical Agent Signals</span></div>${sigs.slice(0,8).map(s => `<div style="padding:8px;border-bottom:1px solid var(--border-color)"><span class="badge badge-blue">${s.signal}</span> <b>${s.agent}</b><div style="font-size:11px;color:var(--text-muted)">${s.reason}</div></div>`).join('') || '<div class="empty-state-text">No geopolitical signals</div>'}`;
+    }
+    const report = document.getElementById('geo-report-panel');
+    if (report) {
+      const r = data.dailyBrief || {};
+      report.innerHTML = `<div class="card-header"><span class="card-title">Daily Geopolitical Risk Brief</span></div><b>${r.headline || '--'}</b><div style="font-size:12px;color:var(--text-muted)">Regime: ${r.risk_regime || '--'} · Quality: ${r.data_quality || 'degraded'}</div>${(r.limitations || []).map(x => `<div style="font-size:11px;color:var(--text-muted)">• ${x}</div>`).join('')}`;
+    }
+  }
+
+  function renderGeoScenarioResult(data) {
+    const panel = document.getElementById('geo-scenario-result');
+    if (!panel || !data) return;
+    panel.innerHTML = `<div class="metric-row"><div class="metric-box"><div class="metric-label">PnL Impact</div><div class="metric-value red">${formatPrice(data.portfolio_pnl_impact)}</div></div><div class="metric-box"><div class="metric-label">Protection</div><div class="metric-value blue">${data.protection_mode || '--'}</div></div></div><div style="font-size:12px;color:var(--text-muted)">Posture: ${data.suggested_risk_posture || '--'} · Hedges: ${(data.hedge_suggestions || []).join('; ')}</div>`;
+  }
+
   return {
     formatTimestamp,
     formatNumber,
@@ -1258,6 +1504,18 @@ const UI = (() => {
     renderVolRegimePanel,
     renderPortfolioRiskPanel,
     renderRedisHealth,
+    renderMacroEvents,
+    renderInstitutionalLayer,
+    renderScenarioResult,
+    renderRiskIntelligence,
+    renderAgentConsensusAndAttribution,
+    renderGeopoliticsTab,
+    renderGeoScenarioResult,
+    renderEquitiesTab,
+    renderStrategyPerformance,
+    renderExecutionEnhancements,
+    renderReplaySimulation,
+    renderAgentMemory,
     addEventToTimeline,
     renderTimeline,
     updateConnectionStatus,
